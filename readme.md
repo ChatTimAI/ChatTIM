@@ -22,6 +22,16 @@ for creating interactive learning documents such as:
 * manuals
 * workbooks
 * discussions
+* a
+* b
+* c
+* d
+* d
+* de
+* sad
+* das
+* s
+* 
 
 TIM can be used for:
 
