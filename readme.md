@@ -13,10 +13,11 @@
 **TIM** (***T**he **I**nteractive **M**aterial*) is an open-source cloud-based platform
 for creating interactive learning documents such as:
 
-* lecture notes Kissa
-* eBooks KoirA
-* exercises Kana 
+* eBooks KoirA 
 * exams Kirahvi
+* lecture notes Lammas
+* eBooks Sika
+* exercises Peruna
 * learning analytics dashboards
 * manuals
 * workbooks
