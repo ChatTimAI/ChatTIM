@@ -45,7 +45,7 @@ def answer(_args: ChatTimAnswerModel) -> PluginAnswerResp:
 def reqs() -> PluginReqs:
     templates = [
         """
-``` {plugin="chattim" #taskidhere}
+``` {plugin="chattim" }
 header: ChatTIM
 ```
 """,
