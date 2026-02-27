@@ -1,6 +1,5 @@
 from dataclasses import dataclass
 from typing import Any
-from google import genai
 
 from tim_common.markupmodels import GenericMarkupModel
 from tim_common.pluginserver_flask import (
@@ -11,7 +10,6 @@ from tim_common.pluginserver_flask import (
     PluginAnswerResp,
     PluginReqs,
     EditorTab,
-    PluginAnswerWeb,
 )
 
 
@@ -40,25 +38,14 @@ class ChatTimAnswerModel(
     pass
 
 
-def answer(args: ChatTimAnswerModel) -> PluginAnswerResp:
-    web: PluginAnswerWeb = {}
-    result: PluginAnswerResp = {"web": web}
-    prompt = args.input["userinput"]
-    client = genai.Client()
-    gemini_response = client.models.embed_content(
-        model="gemini-embedding-001", contents=prompt
-    )
-    embedding: str = str(gemini_response.embeddings[0].values)
-    web["result"] = f"Prompt:{prompt}, \nEmbedding:{embedding}"
-    # web["result"] = embedding
-
-    return result
+def answer(_args: ChatTimAnswerModel) -> PluginAnswerResp:
+    return {}
 
 
 def reqs() -> PluginReqs:
     templates = [
         """
-``` {plugin="chattim" #taskidhere}
+``` {plugin="chattim" }
 header: ChatTIM
 ```
 """,
