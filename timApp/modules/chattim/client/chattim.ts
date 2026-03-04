@@ -1,6 +1,7 @@
 /**
  * Defines the client-side implementation of an example plugin (a chattimndrome checker).
  */
+
 import * as t from "io-ts";
 import {
     GenericPluginMarkup,

@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from typing import Any
 from google import genai
-from openai import OpenAI
+
 from tim_common.markupmodels import GenericMarkupModel
 from tim_common.pluginserver_flask import (
     GenericHtmlModel,
