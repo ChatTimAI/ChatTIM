@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from typing import Any
-
+from google import genai
+from openai import OpenAI
 from tim_common.markupmodels import GenericMarkupModel
 from tim_common.pluginserver_flask import (
     GenericHtmlModel,
@@ -39,10 +40,17 @@ class ChatTimAnswerModel(
     pass
 
 
-def answer(_args: ChatTimAnswerModel) -> PluginAnswerResp:
+def answer(args: ChatTimAnswerModel) -> PluginAnswerResp:
     web: PluginAnswerWeb = {}
     result: PluginAnswerResp = {"web": web}
-    web["result"] = "answer from the server"
+    prompt = args.input["userinput"]
+    client = genai.Client()
+    gemini_response = client.models.embed_content(
+        model="gemini-embedding-001", contents=prompt
+    )
+    embedding: str = str(gemini_response.embeddings[0].values)
+    web["result"] = f"Prompt:{prompt}, \nEmbedding:{embedding}"
+    # web["result"] = embedding
 
     return result
 
