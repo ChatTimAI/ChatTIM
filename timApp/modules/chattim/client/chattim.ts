@@ -37,6 +37,7 @@ const PluginFields = t.intersection([
 export interface ChatEntry {
     user: string;
     agent: string;
+    tokens: number;
 }
 
 // Huom: <tim-dialog-frame ei sisällä markupError attribuuttia
@@ -48,7 +49,8 @@ export interface ChatEntry {
             <ng-container body>
                     <div class="scroll-box">
                         <div *ngFor="let entry of conversation">
-                            <div class="chat-user">{{ entry.user }}</div>
+                            <span class="userinput">{{ entry.user }}</span>
+                            <span class="tokens" *ngIf="entry.tokens">({{ entry.tokens }} tokens)</span>
                             <pre class="chat-bot" [innerHTML]="entry.agent | purify"></pre>
                         </div>
                     </div>
@@ -80,11 +82,11 @@ export class ChatTIMComponent extends AngularPluginBase<
     t.TypeOf<typeof PluginFields>,
     typeof PluginFields
 > {
-    answer?: string;
     error?: string;
     isRunning = false;
     userinput = "";
     inputstem = "";
+    spent_tokens = 0;
 
     conversation: ChatEntry[] = [];
 
@@ -114,7 +116,6 @@ export class ChatTIMComponent extends AngularPluginBase<
 
     async doSendUserInput() {
         this.isRunning = true;
-        this.answer = undefined;
         const params = {
             input: {
                 userinput: this.userinput,
@@ -122,17 +123,16 @@ export class ChatTIMComponent extends AngularPluginBase<
         };
 
         const r = await this.postAnswer<{
-            web: {result: string; error?: string};
+            web: {result: string; error?: string; tokens: number};
         }>(params);
 
         this.isRunning = false;
         if (r.ok) {
             const data = r.result;
-            this.error = data.web.error;
-            this.answer = data.web.result;
             this.conversation.push({
                 user: this.userinput,
-                agent: this.answer,
+                agent: data.web.result,
+                tokens: data.web.tokens,
             });
         } else {
             this.error = r.result.error.error;
