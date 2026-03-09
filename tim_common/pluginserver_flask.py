@@ -543,16 +543,53 @@ def register_answer_route(
     return ans
 
 
+class PluginCustomResp(TypedDict, total=False):
+    base: dict[str, Any]
+
+
+@dataclass
+class GenericCustomModel(GenericRouteModel[PluginInput, PluginMarkup, PluginState]):
+    input: PluginInput
+
+    def make_custom_error(self, msg: str) -> PluginCustomResp:
+        return {"base": {"error": msg}}
+
+
+CustomModel = TypeVar("CustomModel", bound=GenericCustomModel)
+
+
+def register_custom_route(
+    app: Flask | Blueprint,
+    custom_model: type[CustomModel],
+    custom_handler: Callable[[], PluginCustomResp],
+    csrf: CSRFProtect | None = None,
+) -> None:
+    @app.get("/custom")
+    def custom() -> Response:
+        return jsonify(custom_handler())
+
+    if csrf:
+        csrf.exempt(custom)
+
+    return custom
+
+
 def register_plugin_app(
     name: str,
     html_model: type[HtmlModel],
     answer_model: type[AnswerModel],
     answer_handler: Callable[[AnswerModel], PluginAnswerResp],
     reqs_handler: Callable[[], PluginReqs],
+    custom_model: type[CustomModel] | None = None,
+    custom_handler: Callable[[CustomModel], PluginCustomResp] | None = None,
 ) -> Flask:
     app = create_app(name)
     register_html_routes(app, class_schema(html_model), reqs_handler)
     register_answer_route(app, answer_model, answer_handler)
+
+    if custom_model is not None and custom_handler is not None:
+        register_custom_route(app, custom_model, custom_handler)
+
     return app
 
 

@@ -106,8 +106,19 @@ export class ChatTIMComponent extends AngularPluginBase<
         if (!this.userinput?.trim() || this.isRunning) {
             return;
         }
-        await this.doSendUserInput();
+        await this.testSend();
         this.userinput = "";
+    }
+
+    async testSend() {
+        this.isRunning = true;
+        const x = await this.httpGet("/chattim/custom");
+
+        this.isRunning = false;
+        if (x.ok) {
+            const data = x.result;
+            console.log(data);
+        }
     }
 
     getAttributeType() {
