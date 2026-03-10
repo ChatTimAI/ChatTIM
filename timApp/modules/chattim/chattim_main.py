@@ -197,3 +197,14 @@ for var in [
 
 
 launch_if_main(__name__, app)
+
+# import os
+# from sqlalchemy import create_engine, text
+# from sqlalchemy.orm import sessionmaker
+# db_name = os.getenv("COMPOSE_PROJECT_NAME", "tim")
+# url = f"postgresql+psycopg2://postgres:postgresql@postgresql:5432/{db_name}"
+# engine = create_engine(url, pool_pre_ping=True)
+# Session = sessionmaker(bind=engine)
+# with Session() as s:
+#     n = s.execute(text("select count(*) from usergroup")).scalar_one()
+#     print(n)
