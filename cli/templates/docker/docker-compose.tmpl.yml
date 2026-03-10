@@ -252,8 +252,13 @@ ${ partial("docker", "csplugin_mongodb.tmpl.yml") if csplugin.is_mongodb_enabled
    - ./timApp/modules/chattim:/app/chattim:ro
    - ./tim_common:/app/tim_common:ro
   working_dir: /app/chattim
+  depends_on:
+   - postgresql
+  networks:
+   - db
   environment:
    PYTHONPATH: /app
+   OPENAI_API_KEY: ${OPENAI_API_KEY}
   command: ${ "./startAll.sh" if not chattim.is_dev else "sleep infinity" }
   restart: unless-stopped
   read_only: true
