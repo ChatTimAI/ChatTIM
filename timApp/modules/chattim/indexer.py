@@ -83,7 +83,7 @@ class GeminiEmbeddingModel(EmbeddingModel):
 
         return EmbeddingResponse(embeddings=embeddings)
 
-    def create_embedding_response(self):
+    def create_embeddings(self):
         """generates the data object containing embeddings and corresponding text chunks"""
 
         with open("llm_wiki.htm", "r") as file:
@@ -99,4 +99,4 @@ class GeminiEmbeddingModel(EmbeddingModel):
         return data
 # TODO tietokantaan tallennus, promptia vastaavien tekstipätkien hakeminen
 def test():
-    return GeminiEmbeddingModel(api_key="").create_embedding_response()
+    return GeminiEmbeddingModel(api_key="").create_embeddings()
