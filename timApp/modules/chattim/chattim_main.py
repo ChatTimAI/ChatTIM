@@ -1,6 +1,10 @@
 from dataclasses import dataclass
 from typing import Any
 
+from timApp.modules.chattim.database_handler import TimDatabase
+from timApp.defaultconfig import SQLALCHEMY_DATABASE_URI
+from timApp.timdb.sqa import db
+
 from tim_common.markupmodels import GenericMarkupModel
 from tim_common.pluginserver_flask import (
     GenericHtmlModel,
@@ -43,6 +47,9 @@ def answer(_args: ChatTimAnswerModel) -> PluginAnswerResp:
     web: PluginAnswerWeb = {}
     result: PluginAnswerResp = {"web": web}
     web["result"] = "answer from the server"
+
+    tim_db = TimDatabase()
+    print(tim_db.get_tim_pages_by_path(""))
 
     return result
 
@@ -88,6 +95,11 @@ app = register_plugin_app(
     answer_handler=answer,
     reqs_handler=reqs,
 )
+
+
+app.config["SQLALCHEMY_DATABASE_URI"] = SQLALCHEMY_DATABASE_URI
+db.init_app(app)
+db.app = app
 
 
 launch_if_main(__name__, app)
