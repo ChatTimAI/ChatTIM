@@ -1,6 +1,6 @@
 from enum import Enum
 from dataclasses import dataclass
-from rag import Rag, MessageData
+from rag import Rag, MessageData, RagMode
 
 
 # Nämä pitää siirtää myöhemmin jonnekkin muualle

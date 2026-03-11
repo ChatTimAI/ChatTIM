@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from typing import Any
+from plugincore import PluginCore
 
 from tim_common.markupmodels import GenericMarkupModel
 from tim_common.pluginserver_flask import (
@@ -12,6 +13,9 @@ from tim_common.pluginserver_flask import (
     EditorTab,
     PluginAnswerWeb,
 )
+
+
+plugincore = PluginCore()
 
 
 @dataclass
