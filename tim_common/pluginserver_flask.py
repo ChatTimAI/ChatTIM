@@ -561,5 +561,5 @@ def launch_if_main(name: str, app: Flask) -> None:
         app.run(
             host="0.0.0.0",
             port=5000,
-            debug=False,  # for live reloading, this can be turned on
+            debug=True,  # for live reloading, this can be turned on
         )

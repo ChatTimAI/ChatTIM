@@ -254,6 +254,7 @@ ${ partial("docker", "csplugin_mongodb.tmpl.yml") if csplugin.is_mongodb_enabled
   working_dir: /app/chattim
   environment:
    PYTHONPATH: /app
+   OPENAI_API_KEY: ${OPENAI_API_KEY}
   command: ${ "./startAll.sh" if not chattim.is_dev else "sleep infinity" }
   restart: unless-stopped
   read_only: true

@@ -12,6 +12,9 @@ from tim_common.pluginserver_flask import (
     EditorTab,
     PluginAnswerWeb,
 )
+import os
+from rag import *
+from model import *
 
 
 @dataclass
@@ -42,8 +45,36 @@ class ChatTimAnswerModel(
 def answer(_args: ChatTimAnswerModel) -> PluginAnswerResp:
     web: PluginAnswerWeb = {}
     result: PluginAnswerResp = {"web": web}
-    web["result"] = "answer from the server"
+    user_input = _args.input["userinput"]
 
+    model_info = SUPPORTED_MODELS.get("openai")[0]
+    try:
+        api_key = os.getenv("OPENAI_API_KEY")
+    except ValueError as e:
+        print("Failed to get api_key: ", str(e))
+        web["result"] = "Failed to get api_key: " + str(e)
+        return result
+
+    spec = ModelRegistry.ModelSpec(
+        provider=model_info.provider,
+        model_id=model_info.model_id,
+        api_key=api_key,
+    )
+
+    rag: Rag = Rag(model_spec=spec)
+    prompt: UserPrompt = UserPrompt(user_id="", content=user_input)
+
+    answer_msg = ""
+    usage = None
+    stream = rag.answer(prompt)
+    for msg in stream:
+        answer_msg += msg.delta or ""
+        if msg.usage is not None:
+            usage = msg.usage
+        print(msg)
+    print("Usage:", usage)
+
+    web["result"] = answer_msg
     return result
 
 
