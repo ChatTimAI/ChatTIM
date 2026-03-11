@@ -17,6 +17,7 @@ import {DialogModule} from "tim/ui/angulardialog/dialog.module";
 import {PurifyModule} from "tim/util/purify.module";
 import {registerPlugin} from "tim/plugin/pluginRegistry";
 import {CommonModule} from "@angular/common";
+import {TeacherControlPanelModule} from "./controlpanel";
 
 const PluginMarkupFields = t.intersection([
     t.partial({
@@ -70,6 +71,8 @@ export interface ChatEntry {
 
                     <tim-loading *ngIf="isRunning"></tim-loading>
                     <div *ngIf="error" [innerHTML]="error | purify"></div>
+          
+                <controlpanel-runner></controlpanel-runner>
             </ng-container>
         </tim-dialog-frame>
     `,
@@ -149,6 +152,7 @@ export class ChatTIMComponent extends AngularPluginBase<
         TimUtilityModule,
         PurifyModule,
         DialogModule,
+        TeacherControlPanelModule,
     ],
 })
 export class ChatTIMModule implements DoBootstrap {
