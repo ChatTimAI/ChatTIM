@@ -1,3 +1,4 @@
+from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
@@ -12,7 +13,9 @@ from tim_common.pluginserver_flask import (
     EditorTab,
     PluginAnswerWeb,
 )
+from flask import Response, request, stream_with_context
 import os
+import json
 from rag import *
 from model import *
 
@@ -47,12 +50,10 @@ def answer(_args: ChatTimAnswerModel) -> PluginAnswerResp:
     result: PluginAnswerResp = {"web": web}
     user_input = _args.input["userinput"]
 
-    model_info = SUPPORTED_MODELS.get("openai")[0]
-    try:
-        api_key = os.getenv("OPENAI_API_KEY")
-    except ValueError as e:
-        print("Failed to get api_key: ", str(e))
-        web["result"] = "Failed to get api_key: " + str(e)
+    model_info = SUPPORTED_MODELS["openai"][0]
+    api_key = os.getenv("OPENAI_API_KEY")
+    if not api_key:
+        web["result"] = "Missing OPENAI_API_KEY"
         return result
 
     spec = ModelRegistry.ModelSpec(
@@ -119,6 +120,44 @@ app = register_plugin_app(
     answer_handler=answer,
     reqs_handler=reqs,
 )
+
+
+@app.post("/test")
+def test():
+    model_info = SUPPORTED_MODELS["openai"][0]
+    api_key = os.getenv("OPENAI_API_KEY")
+    if not api_key:
+        return Response("Missing OPENAI_API_KEY\n", status=500, mimetype="text/plain")
+
+    body_json = request.get_json(silent=True) or {}
+    user_input = request.form.get("prompt") or body_json.get("prompt")
+    if not user_input:
+        return Response("Missing prompt\n", status=400, mimetype="text/plain")
+
+    spec = ModelRegistry.ModelSpec(
+        provider=model_info.provider,
+        model_id=model_info.model_id,
+        api_key=api_key,
+    )
+
+    rag: Rag = Rag(model_spec=spec)
+    prompt: UserPrompt = UserPrompt(user_id="", content=user_input)
+
+    @stream_with_context
+    def generate() -> Any:
+        stream = rag.answer(prompt)
+        for msg in stream:
+            if msg.delta:
+                yield msg.delta
+            if msg.usage:
+                print(msg.usage)
+                yield "\n\nUsage: " + str(msg.usage) + "\n"
+
+    return Response(
+        generate(),
+        mimetype="text/plain",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
 
 
 launch_if_main(__name__, app)
