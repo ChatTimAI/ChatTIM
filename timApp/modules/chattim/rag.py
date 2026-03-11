@@ -51,7 +51,7 @@ class Rag:
 
     def answer(self, request_data: MessageData) -> Iterable[ModelResponseChunk]:
         """Give an answer to the user using the model."""
-        messages = self.build_prompt()
+        messages = self.build_prompt(request_data)
         # TODO: simplify?
         try:
             if self.model.get_info().supports_streaming:
