@@ -251,6 +251,7 @@ ${ partial("docker", "csplugin_mongodb.tmpl.yml") if csplugin.is_mongodb_enabled
   volumes:
    - ./timApp/modules/chattim:/app/chattim:ro
    - ./tim_common:/app/tim_common:ro
+   - .:/service
   working_dir: /app/chattim
   depends_on:
    - postgresql

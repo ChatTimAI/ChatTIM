@@ -1,46 +1,12 @@
+from __future__ import annotations
+
 from dataclasses import dataclass
 from typing import Any
 
+import timApp.tim_app
+from timApp.document.docentry import get_documents, DocInfo
 from timApp.timdb.sqa import db
-from timApp.document.docentry import get_documents, DocEntry
-
-from timApp.document.docentry import (
-    DocEntry,
-    get_documents_in_folder,
-    get_documents,
-)
-from timApp.document.docinfo import DocInfo
-from timApp.folder.folder import Folder
-from timApp.item.deleting import (
-    soft_delete_document,
-)
-from timApp.timdb.sqa import db, run_sql
-from timApp.user.user import User
-from timApp.user.usergroup import UserGroup
-from timApp.user.users import get_rights_holders, remove_access
-from timApp.user.userutils import grant_access
-
-
-# import timApp.tim_app
-
-import timApp.readmark.readparagraph  # ReadParagraph
-import timApp.note.usernote  # UserNote
-import timApp.auth.auth_models  # BlockAccess, etc.
-import timApp.item.block  # Block
-import timApp.messaging.messagelist.messagelist_models
-import timApp.messaging.timMessage.internalmessage_models
-import timApp.user.usergroup
-
-import timApp.item.item
-import timApp.user.user
-import timApp.auth.get_user_rights_for_item
-
-# from flask_migrate import Migrate
-
-
-from timApp.defaultconfig import SQLALCHEMY_DATABASE_URI
-
-# from timApp.testconfig import SQLALCHEMY_DATABASE_URI
+from timApp.defaultconfig import DB_URI
 
 from tim_common.markupmodels import GenericMarkupModel
 from tim_common.pluginserver_flask import (
@@ -109,7 +75,7 @@ def answer(_args: ChatTimAnswerModel) -> PluginAnswerResp:
         api_key=api_key,
     )
 
-    rag: Rag = Rag(model_spec=spec)
+    rag: Rag = Rag(model_spec=None)
     prompt: UserPrompt = UserPrompt(user_id="", content=user_input)
 
     answer_msg = ""
@@ -120,7 +86,8 @@ def answer(_args: ChatTimAnswerModel) -> PluginAnswerResp:
 
     web["result"] = answer_msg
 
-    get_documents(filter_folder="")
+    docs = get_documents(filter_folder="")
+    print(docs)
     web["result"] = answer_msg
 
     return result
@@ -168,19 +135,10 @@ app = register_plugin_app(
     reqs_handler=reqs,
 )
 
-# if app.config["PROFILE"]:
-# app.wsgi_app = ProfilerMiddleware(
-#    app.wsgi_app,
-#    sort_by=("cumtime",),
-#    restrictions=[100],
-#    profile_dir="/service/timApp/static/profiling",
-# )
-
-
-app.config["SQLALCHEMY_DATABASE_URI"] = SQLALCHEMY_DATABASE_URI
-app.config["DB_URI"] = SQLALCHEMY_DATABASE_URI
+app.config["SQLALCHEMY_DATABASE_URI"] = DB_URI
 db.init_app(app)
-db.app = app
+# app.config["DB_URI"] = DB_URI
+# db.app = app
 # migrate = Migrate(app, db)
 
 for var in [
@@ -197,14 +155,3 @@ for var in [
 
 
 launch_if_main(__name__, app)
-
-# import os
-# from sqlalchemy import create_engine, text
-# from sqlalchemy.orm import sessionmaker
-# db_name = os.getenv("COMPOSE_PROJECT_NAME", "tim")
-# url = f"postgresql+psycopg2://postgres:postgresql@postgresql:5432/{db_name}"
-# engine = create_engine(url, pool_pre_ping=True)
-# Session = sessionmaker(bind=engine)
-# with Session() as s:
-#     n = s.execute(text("select count(*) from usergroup")).scalar_one()
-#     print(n)
