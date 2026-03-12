@@ -13,3 +13,4 @@ gevent>=24.10.1
 openai
 google-genai
 beautifulsoup4
+scikit-learn
