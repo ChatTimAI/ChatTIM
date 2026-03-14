@@ -256,7 +256,7 @@ ${ partial("docker", "csplugin_mongodb.tmpl.yml") if csplugin.is_mongodb_enabled
    PYTHONPATH: /app
   command: ${ "./startAll.sh" if not chattim.is_dev else "sleep infinity" }
   restart: unless-stopped
-  read_only: true
+  read_only: false
   tmpfs:
    - /tmp
  dumbo:
