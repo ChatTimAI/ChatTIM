@@ -1,4 +1,3 @@
-from http.client import responses
 
 from google import genai
 from dataclasses import dataclass, asdict
@@ -105,31 +104,35 @@ class GeminiEmbeddingModel(EmbeddingModel):
             EmbeddingData(embedding=embedding, text=text, id=i)
             for (embedding, text, i) in zip(embeddings.embeddings, chunks.chunks, ids)
         ]
+        data_dict = [asdict(obj) for obj in data]
         with open("embeddings.json", "w") as f:
-            json.dump(data, f, indent=2)
+            json.dump(data_dict, f, indent=2)
         return data
 
 
-def get_embeddings(doc_id: int) -> list[EmbeddingData]:
-    response: list[EmbeddingData] = [None]
-    return response
+def get_embeddings():
+    with open("embeddings.json", "r") as file:
+        page_embeddings = json.load(file)
+
+    return page_embeddings
 
 
-# TODO tietokantaan tallennus, promptia vastaavien tekstipätkien hakeminen
-def getContext(doc_id: int, prompt: str, k: int = 5):
-    # needs fix...
+def getContext(prompt: str, k: int = 5, doc_id: int = None):
     prompt = TextChunks(chunks=[prompt])
     prompt_embedding = GeminiEmbeddingModel(api_key="").generate(prompt)
-    page_embeddings: list[EmbeddingData] = get_embeddings(doc_id)
-    similarities: list[list[str, float]] = []
+    page_embeddings = get_embeddings()
+
+    embeddings = []
+    texts = []
     for chunk in page_embeddings:
-        similarity = cosine_similarity(chunk.embedding, prompt_embedding)
-        similarities.append([chunk.text, similarity])
+        embeddings.append(chunk["embedding"])
+        texts.append(chunk["text"])
 
-    similarities.sort(key=lambda x: x[0], reverse=True)
-    best_chunks = similarities[0:k]
+    similarities = cosine_similarity(embeddings, prompt_embedding.embeddings)
+
+    data = [[t, e] for t, e in zip(texts, similarities)]
+
+    data.sort(key=lambda x: x[1], reverse=True)
+
+    best_chunks = data[0:k]
     return best_chunks
-
-
-def test():
-    return GeminiEmbeddingModel(api_key="").create_embeddings()
