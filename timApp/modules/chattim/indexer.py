@@ -5,7 +5,7 @@ from typing import Protocol
 from bs4 import BeautifulSoup
 from sklearn.metrics.pairwise import cosine_similarity
 import json
-
+from openai import OpenAI
 
 @dataclass
 class TextChunks:
@@ -74,42 +74,62 @@ class GeminiEmbeddingModel(EmbeddingModel):
 
     def __init__(self, api_key: str):
         self.api_key = api_key
-
+        self.client = genai.Client(api_key=self.api_key)
     def generate(self, chunks: TextChunks) -> EmbeddingResponse:
         """generates embeddings from provided chunks"""
 
         text = chunks.chunks
-        client = genai.Client(api_key=self.api_key)
+
         try:
-            result = client.models.embed_content(model="gemini-embedding-001",contents=text,)
+            result = self.client.models.embed_content(model="gemini-embedding-001",contents=text,)
         except Exception as e:
             return f"Error generating embeddings {e}"
         embeddings = [x.values for x in result.embeddings]
 
         return EmbeddingResponse(embeddings=embeddings)
 
-    def create_embeddings(self):
-        """generates the data object containing embeddings and corresponding text chunks"""
 
-        with open("llm_wiki.htm", "r") as file:
-            page = file.read()
+class OpenAiEmbeddingModel(EmbeddingModel):
+    """openai implementation of embedding model"""
 
-        chunks = TextChunkerHTML(page).split_paragraph()
+    def __init__(self, api_key: str):
+        self.api_key = api_key
+        self.client = OpenAI(api_key=self.api_key)
+    def generate(self, chunks: TextChunks):
+        """generates embeddings from provided chunks"""
+        text = chunks.chunks
 
-        embeddings = self.generate(chunks)
-
-        ids = list(range(len(chunks.chunks)))
-        data = [
-            EmbeddingData(embedding=embedding, text=text, id=i)
-            for (embedding, text, i) in zip(embeddings.embeddings, chunks.chunks, ids)
-        ]
-        data_dict = [asdict(obj) for obj in data]
         try:
-            with open("/tmp/embeddings.json", "w") as f:
-                json.dump(data_dict, f, indent=2)
-        except Exception as e:
-            return f"Error saving embeddings {e}"
-        return data
+            result = self.client.embeddings.create(input=text, model="text-embedding-3-small")
+        except Exception as r:
+            print("Error generating embeddings", r)
+            return EmbeddingResponse(embeddings=[])
+
+        embeddings = [x.embedding for x in result.data]
+        return EmbeddingResponse(embeddings=embeddings)
+
+def create_embeddings():
+    """generates the data object containing embeddings and corresponding text chunks"""
+
+    with open("llm_wiki.htm", "r") as file:
+        page = file.read()
+
+    chunks = TextChunkerHTML(page).split_paragraph()
+
+    embeddings = GeminiEmbeddingModel(api_key="").generate(chunks)
+    # embeddings = self.generate(chunks)
+    ids = list(range(len(chunks.chunks)))
+    data = [
+        EmbeddingData(embedding=embedding, text=text, id=i)
+        for (embedding, text, i) in zip(embeddings.embeddings, chunks.chunks, ids)
+    ]
+    data_dict = [asdict(obj) for obj in data]
+    try:
+        with open("/tmp/embeddings.json", "w") as f:
+            json.dump(data_dict, f, indent=2)
+    except Exception as e:
+        return f"Error saving embeddings {e}"
+    return data
 
 
 def get_embeddings():
