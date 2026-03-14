@@ -80,11 +80,10 @@ class GeminiEmbeddingModel(EmbeddingModel):
 
         text = chunks.chunks
         client = genai.Client(api_key=self.api_key)
-
-        result = client.models.embed_content(
-            model="gemini-embedding-001",
-            contents=text,
-        )
+        try:
+            result = client.models.embed_content(model="gemini-embedding-001",contents=text,)
+        except Exception as e:
+            return f"Error generating embeddings {e}"
         embeddings = [x.values for x in result.embeddings]
 
         return EmbeddingResponse(embeddings=embeddings)
@@ -105,21 +104,30 @@ class GeminiEmbeddingModel(EmbeddingModel):
             for (embedding, text, i) in zip(embeddings.embeddings, chunks.chunks, ids)
         ]
         data_dict = [asdict(obj) for obj in data]
-        with open("embeddings.json", "w") as f:
-            json.dump(data_dict, f, indent=2)
+        try:
+            with open("embeddings.json", "w") as f:
+                json.dump(data_dict, f, indent=2)
+        except Exception as e:
+            return f"Error saving embeddings {e}"
         return data
 
 
 def get_embeddings():
-    with open("embeddings.json", "r") as file:
-        page_embeddings = json.load(file)
-
+    try:
+        with open("embeddings.json", "r") as file:
+            page_embeddings = json.load(file)
+    except Exception as e:
+        return f"Error retrieving embeddings {e}"
     return page_embeddings
 
 
-def getContext(prompt: str, k: int = 5, doc_id: int = None):
+def get_context(prompt: str, k: int = 5, doc_id: int = None):
     prompt = TextChunks(chunks=[prompt])
-    prompt_embedding = GeminiEmbeddingModel(api_key="").generate(prompt)
+    try:
+        prompt_embedding = GeminiEmbeddingModel(api_key="").generate(prompt)
+    except Exception as e:
+
+        return f'Prompt embedding error: {e}'
     page_embeddings = get_embeddings()
 
     embeddings = []
