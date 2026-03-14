@@ -1,6 +1,8 @@
 from dataclasses import dataclass
 from typing import Any
 
+from timApp.tim_app import csrf
+from timApp.util.flask.typedblueprint import TypedBlueprint
 from tim_common.markupmodels import GenericMarkupModel
 from tim_common.pluginserver_flask import (
     GenericHtmlModel,
@@ -11,6 +13,7 @@ from tim_common.pluginserver_flask import (
     PluginReqs,
     EditorTab,
     PluginAnswerWeb,
+    create_blueprint,
 )
 
 
@@ -81,13 +84,12 @@ header: ChatTIM
     return result
 
 
-app = register_plugin_app(
+chattim = create_blueprint(
     __name__,
-    html_model=ChatTimHtmlModel,
-    answer_model=ChatTimAnswerModel,
-    answer_handler=answer,
-    reqs_handler=reqs,
+    "chattim",
+    ChatTimHtmlModel,
+    ChatTimAnswerModel,
+    answer,
+    reqs,
+    csrf,
 )
-
-
-launch_if_main(__name__, app)
