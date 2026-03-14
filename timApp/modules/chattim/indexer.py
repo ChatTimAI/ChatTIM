@@ -105,7 +105,7 @@ class GeminiEmbeddingModel(EmbeddingModel):
         ]
         data_dict = [asdict(obj) for obj in data]
         try:
-            with open("embeddings.json", "w") as f:
+            with open("/tmp/embeddings.json", "w") as f:
                 json.dump(data_dict, f, indent=2)
         except Exception as e:
             return f"Error saving embeddings {e}"
@@ -114,7 +114,7 @@ class GeminiEmbeddingModel(EmbeddingModel):
 
 def get_embeddings():
     try:
-        with open("embeddings.json", "r") as file:
+        with open("/tmp/embeddings.json", "r") as file:
             page_embeddings = json.load(file)
     except Exception as e:
         return f"Error retrieving embeddings {e}"
