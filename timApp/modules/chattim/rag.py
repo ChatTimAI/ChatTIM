@@ -11,8 +11,10 @@ from model import (
     ModelRegistry,
     SUPPORTED_MODELS,
     get_dummy_model,
+    ModelInfo,
 )
 from enum import Enum
+
 
 _DEFAULT_SYSTEM_PROMPT_RETRIEVE = ""
 _DEFAULT_SYSTEM_PROMPT_CREATIVE = ""
@@ -36,27 +38,60 @@ class MessageData:
 
 
 class Rag:
-    mode: list[RagMode]
-    # TODO:
-    # Need reference to PluginCore/indexer/database
-    # or callbacks to functions to get context, user chat history
+    models: dict[int, ChatModel] = {}
 
-    def __init__(
-        self,
-        model_spec: ModelRegistry.ModelSpec | None = None,
-    ):
-        # TODO: modify model creation
-        # Joko kaikki tuetut modelit tallennetaan muistiin modelistaan tai sitten luodaan vain tarvittaessa?
-        self.model = registry.create(model_spec) if model_spec else get_dummy_model()
+    def add_model(self, spec: ModelRegistry.ModelSpec, identifier: int):
+        """
+        Model spec need not specify the base_url.
+        Note that if model with identifier exists it is overwritten.
+        :param spec: Model is built according to this spec
+        :param identifier: identifier of the model, used for answer calls etc
+        Raises:
+            ValueError: If the provider or model is unknown
+        """
 
-    def answer(self, request_data: MessageData) -> Iterable[ModelResponseChunk]:
-        """Give an answer to the user using the model."""
+        model = registry.create(spec)
+        self.models[identifier] = model
+
+    def remove_model(self, identifier: int):
+        """
+        Model spec need not specify the base_url.
+        Nothing is done if model with identifier doesn't exist.
+        :param identifier: identifier of the model
+        Raises:
+            ValueError: If the provider or model is unknown
+        """
+        if identifier in self.models:
+            del self.models[identifier]
+
+    def model_exists(self, identifier: int) -> bool:
+        if identifier in self.models:
+            return True
+        return False
+
+    def answer(
+        self, request_data: MessageData, identifier: int
+    ) -> Iterable[ModelResponseChunk]:
+        """
+        Give an answer to the user using the model.
+        :param request_data: Information for the prompt
+        :param identifier: identifier of the model to be used
+
+        Raises:
+            ValueError: If the model isn't created
+        """
+
+        if identifier not in self.models:
+            raise KeyError(f"Key '{identifier}' not found in the dictionary")
+
+        model = self.models[identifier]
         messages = self.build_prompt(request_data)
+
         # TODO: simplify?
         try:
-            if self.model.get_info().supports_streaming:
-                return self.model.generate_stream(messages, GenerateOptions())
-            res: ModelResponse = self.model.generate(messages, GenerateOptions())
+            if model.get_info().supports_streaming:
+                return model.generate_stream(messages, GenerateOptions())
+            res: ModelResponse = model.generate(messages, GenerateOptions())
         except Exception as e:
             # TODO: better error handling
             print("error(RAG): ", str(e))
@@ -64,6 +99,22 @@ class Rag:
         # TODO: answer post processing
         # Include the urls/document ids?
         return [ModelResponseChunk(delta=res.content, usage=res.usage, done=True)]
+
+    def get_supported_models(self) -> dict[str, list[ModelInfo]]:
+        """
+        Get all supported models. Example:
+        "openai": [
+            ModelInfo(
+                provider="openai",
+                model_id="gpt-4.1-mini",
+                label="GPT-4.1 Mini",
+                supports_temperature=True,
+                supports_streaming=True,
+            ),
+        ],
+        :return:
+        """
+        return registry.get_models()
 
     def build_prompt(self, message_data: MessageData) -> list[Message]:
         """Build the message list to send to the model."""

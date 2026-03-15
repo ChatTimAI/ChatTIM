@@ -253,6 +253,18 @@ class DummyChatModel(ChatModel):
 class ModelRegistry:
     """Registry for all the supported models."""
 
+    supported_models: dict[Provider, list[ModelInfo]] = {
+        "openai": [
+            ModelInfo(
+                provider="openai",
+                model_id="gpt-4.1-mini",
+                label="GPT-4.1 Mini",
+                supports_temperature=True,
+                supports_streaming=True,
+            ),
+        ],
+    }
+
     @dataclass(frozen=True)
     class ModelSpec:
         """Data needed for creating a new `ChatModel` instance."""
@@ -262,20 +274,24 @@ class ModelRegistry:
         api_key: str
         base_url: str | None = None
 
-    def __init__(self, models: dict[Provider, list[ModelInfo]]):
-        self._models: dict[Provider, dict[str, ModelInfo]] = {
-            provider: {model.model_id: model for model in model_list}
-            for provider, model_list in models.items()
-        }
-
-    def get_models(self, provider: Provider | None = None) -> dict[str, ModelInfo]:
-        """Get all the supported models."""
+    def get_models(self, provider: Provider | None = None) -> list[ModelInfo]:
+        """
+        For getting all supported models in flat hierarchy by provider or all of them
+        """
         if not provider:
-            out: dict[str, ModelInfo] = {}
-            for models in self._models.values():
-                out.update(models)
+            out: list[ModelInfo] = []
+            for models_list in self.supported_models.values():
+                for model in models_list:
+                    out.append(model)
             return out
-        return self._models.get(provider, {})
+
+        return self.supported_models.get(provider, {})
+
+    def get_all_models(self) -> dict[str, list[ModelInfo]]:
+        """
+        For getting all supported models structured by provider
+        """
+        return self.supported_models.copy()
 
     def get_model_info(
         self,
@@ -283,8 +299,12 @@ class ModelRegistry:
         model_id: str,
     ) -> ModelInfo | None:
         """Get model info for a specific model."""
-        models = self._models.get(provider, [])
-        return models.get(model_id)
+        models = self.supported_models.get(provider, [])
+        for model in models:
+            if model.model_id == model_id:
+                return model
+
+        return None
 
     def create(self, spec: ModelSpec) -> ChatModel:
         """
@@ -311,19 +331,6 @@ PROVIDERS: dict[Provider, ProviderInitFn] = {
     "openai": lambda info, key, url: OpenAiModel(info, key, url),
 }
 """All the supported providers."""
-
-# TODO: save in the database
-SUPPORTED_MODELS: dict[Provider, list[ModelInfo]] = {
-    "openai": [
-        ModelInfo(
-            provider="openai",
-            model_id="gpt-4.1-mini",
-            label="GPT-4.1 Mini",
-            supports_temperature=True,
-            supports_streaming=True,
-        ),
-    ],
-}
 
 
 def get_dummy_model() -> ChatModel:
