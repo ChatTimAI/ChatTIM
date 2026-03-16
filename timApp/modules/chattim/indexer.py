@@ -59,8 +59,21 @@ class TextChunkerHTML:
         # vain ensimmäiset 20 kappaletta ilmaisen avaimen takia
         paragraphs = TextChunks(chunks=paragraphs_text[0:20])
         return paragraphs
+class TextChunker:
 
+    def __init__(self, text: str):
+        self.text = text
+    def split_sentence(self) -> TextChunks:
+        return TextChunks(chunks = self.text.split(". "))
+    def split(self,chunk_size: int = 600,overlap: int = 100):
 
+        chunks = []
+        start = 0
+        while start < len(self.text):
+            end = start+chunk_size
+            chunks.append(self.text[start:end])
+            start += chunk_size-overlap
+        return TextChunks(chunks=chunks)
 # TODO mallin valinta,
 #  mahdollisesti mallikohtaisia asetuksia?(task type,vektorin koko jne)
 class EmbeddingModel(Protocol):
