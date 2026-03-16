@@ -45,6 +45,7 @@ class TextChunkerHTML:
     def split_sentence(self) -> TextChunks:
         soup = BeautifulSoup(self.text, "html.parser")
         self.text = soup.get_text(strip=True)
+        #needs better sentence splitting
         chunks = TextChunks(chunks=self.text.split(". "))
         return chunks
 
@@ -64,7 +65,9 @@ class TextChunker:
     def __init__(self, text: str):
         self.text = text
     def split_sentence(self) -> TextChunks:
+        #needs better sentence splitting
         return TextChunks(chunks = self.text.split(". "))
+    #splits every 600 characters, includes 100 from last chunk
     def split(self,chunk_size: int = 600,overlap: int = 100):
 
         chunks = []
@@ -74,6 +77,20 @@ class TextChunker:
             chunks.append(self.text[start:end])
             start += chunk_size-overlap
         return TextChunks(chunks=chunks)
+    def split2(self,max_chunk_size: int = 600,overlap: int = 100):
+        chunks = []
+        sentences = self.text.split(". ")
+        current_chunk = ""
+        for sentence in sentences:
+            if((len(current_chunk)+len(sentence)) < max_chunk_size):
+                current_chunk += sentence + ". "
+            else:
+                chunks.append(current_chunk)
+                overlapping_text = current_chunk[overlap:]
+                current_chunk += overlapping_text + ". " + sentence
+        if (len(current_chunk)) > 0:
+            chunks.append(current_chunk)
+
 # TODO mallin valinta,
 #  mahdollisesti mallikohtaisia asetuksia?(task type,vektorin koko jne)
 class EmbeddingModel(Protocol):
