@@ -263,6 +263,14 @@ class ModelRegistry:
                 supports_streaming=True,
             ),
         ],
+        "dummy": [
+            ModelInfo(
+                provider="dummy",
+                model_id="dummy-model-1",
+                label="Dummy model",
+                supports_streaming=True,
+            ),
+        ],
     }
 
     @dataclass(frozen=True)
