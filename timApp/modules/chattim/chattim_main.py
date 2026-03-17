@@ -4,18 +4,14 @@ from flask import request
 
 from timApp.tim_app import csrf
 from timApp.util.flask.responsehelper import json_response
-from timApp.util.flask.typedblueprint import TypedBlueprint
 from tim_common.markupmodels import GenericMarkupModel
 from tim_common.pluginserver_flask import (
     GenericHtmlModel,
-    GenericAnswerModel,
-    register_plugin_app,
-    launch_if_main,
     PluginAnswerResp,
     PluginReqs,
     EditorTab,
     PluginAnswerWeb,
-    create_blueprint,
+    create_nontask_blueprint,
 )
 
 
@@ -35,22 +31,6 @@ class ChatTimHtmlModel(
 ):
     def get_component_html_name(self) -> str:
         return "chattim-runner"
-
-
-@dataclass
-class ChatTimAnswerModel(
-    GenericAnswerModel[ChatTimInputModel, ChatTimMarkupModel, ChatTimStateModel]
-):
-    pass
-
-
-# TODO: hankkiudu eroon (ehkä pitää muuttaa myös create_blueprint)
-def answer(_args: ChatTimAnswerModel) -> PluginAnswerResp:
-    web: PluginAnswerWeb = {}
-    result: PluginAnswerResp = {"web": web}
-    web["result"] = "answer from the server"
-
-    return result
 
 
 def reqs() -> PluginReqs:
@@ -87,14 +67,12 @@ header: ChatTIM
     return result
 
 
-chattim = create_blueprint(
-    __name__,
-    "chattim",
-    ChatTimHtmlModel,
-    ChatTimAnswerModel,
-    answer,
-    reqs,
-    csrf,
+chattim = create_nontask_blueprint(
+    name=__name__,
+    plugin_name="chattim",
+    html_model=ChatTimHtmlModel,
+    reqs_handler=reqs,
+    csrf=csrf,
 )
 
 
@@ -105,8 +83,10 @@ def define_ask_route():
 
     # TODO: pitäisi varmaan muuttaa jotenkin tyyliin: define_ask_route(input: SomeDataClass) jne
     data = request.get_json()
-    input = data.get("input")
-    id = data.get("id")
+    user_input = data.get("input")
+    user_id = data.get("user_id")
+    document_id = data.get("document_id")
+
     # TODO: kytke plugincoreen
 
     return json_response(result)
