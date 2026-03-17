@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from timApp.document.document import Document
 from timApp.document import docentry
 from timApp.item.item import Item
 from timApp.user.user import User
@@ -24,31 +25,30 @@ class TimDatabase:
         return "user"  # TODO: better options
 
     @staticmethod
-    def get_tim_pages_by_id(id_list: list[int]):
+    def get_tim_document_by_id(doc_id: int):
         """
-        Returns a list of pages corresponding to the given list of ids.
+        Returns a document corresponding to the given id.
         """
-        doc_entries = docentry.get_documents(custom_filter=id(id_list))
-        documents = []
-        for d in doc_entries:
-            documents.append(d.document)
-        return documents
+        doc_entry = docentry.DocEntry.find_all_by_id(doc_id)
+        if doc_entry:
+            return doc_entry[0].document  # paragraphs -> .get_paragraphs()
+        return None
 
     @staticmethod
-    def get_tim_pages_by_path(path: str):
+    def get_tim_documents_by_path(path: str):
         """
-        Returns a list of pages corresponding to the given path.
+        Returns a list of documents corresponding to the given path.
         """
         doc_entries = docentry.get_documents(filter_folder=path)
         documents = []
-        for d in doc_entries:
-            documents.append(d.document)
+        for d in doc_entries if doc_entries else []:
+            documents.append(d.document)  # paragraphs -> .get_paragraphs()
         return documents
 
     @staticmethod
     def check_rights(user_id: int, doc_id: int) -> UserItemRights:
         """
-        Checks if the given user has the rights to the given document.
+        Checks which rights the given user has for the given document.
         """
         user = User.get_by_id(user_id)
         doc = Item.find_by_id(doc_id)
