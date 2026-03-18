@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from typing import Any
 from flask import request
+from timApp.modules.chattim.plugincore import PluginCore
 
 from timApp.tim_app import csrf
 from timApp.util.flask.responsehelper import json_response
@@ -13,6 +14,8 @@ from tim_common.pluginserver_flask import (
     PluginAnswerWeb,
     create_nontask_blueprint,
 )
+
+_plugincore = PluginCore()
 
 
 @dataclass
@@ -76,10 +79,18 @@ chattim = create_nontask_blueprint(
 )
 
 
+@dataclass(frozen=True)
+class PluginChatAnswer:
+    response: str
+    error: str
+
+
+counter = 0  # TODO: REMOVE ASAP
+
+
 @chattim.post("/ask")
 def define_ask_route():
-    web: PluginAnswerWeb = {"result": "hello from server"}
-    result: PluginAnswerResp = {"web": web}
+    global counter  # TODO: REMOVE ASAP
 
     # TODO: pitäisi varmaan muuttaa jotenkin tyyliin: define_ask_route(input: SomeDataClass) jne
     data = request.get_json()
@@ -87,6 +98,13 @@ def define_ask_route():
     user_id = data.get("user_id")
     document_id = data.get("document_id")
 
-    # TODO: kytke plugincoreen
+    if counter == 0:
+        _plugincore.create_instance(
+            user_id, document_id
+        )  # TODO: poista heti kun löydetään instanssin luomiselle joku route
+        counter = 1
 
-    return json_response(result)
+    resp = _plugincore.chat_request(user_id, document_id, user_input)
+    returnable = {"web": {"result": resp.value, "error": resp.error}}
+
+    return json_response(returnable)

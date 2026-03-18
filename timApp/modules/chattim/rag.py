@@ -2,16 +2,15 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import Iterable
-from model import (
+from timApp.modules.chattim.model import (
     ChatModel,
     GenerateOptions,
     Message,
     ModelResponse,
     ModelResponseChunk,
     ModelRegistry,
-    SUPPORTED_MODELS,
-    get_dummy_model,
     ModelInfo,
+    ModelSpec,
 )
 from enum import Enum
 
@@ -20,7 +19,7 @@ _DEFAULT_SYSTEM_PROMPT_RETRIEVE = ""
 _DEFAULT_SYSTEM_PROMPT_CREATIVE = ""
 
 # TODO: remove
-registry = ModelRegistry(SUPPORTED_MODELS)
+registry = ModelRegistry
 
 
 class RagMode(Enum):
@@ -31,16 +30,19 @@ class RagMode(Enum):
 @dataclass
 class MessageData:
     user_prompt: str
-    tim_context: str
+    context: str
     chat_history: list[Message]
     mode: RagMode
     max_tokens: int
 
 
 class Rag:
+    registry: ModelRegistry = (
+        ModelRegistry()
+    )  # TODO: varmaan helpompi vaihtaa nuo MR funktiot statiticsi kuin pitää täällä instanssia???
     models: dict[int, ChatModel] = {}
 
-    def add_model(self, spec: ModelRegistry.ModelSpec, identifier: int):
+    def add_model(self, spec: ModelSpec, identifier: int):
         """
         Model spec need not specify the base_url.
         Note that if model with identifier exists it is overwritten.
@@ -50,7 +52,7 @@ class Rag:
             ValueError: If the provider or model is unknown
         """
 
-        model = registry.create(spec)
+        model = self.registry.create(spec)
         self.models[identifier] = model
 
     def remove_model(self, identifier: int):
@@ -114,7 +116,7 @@ class Rag:
         ],
         :return:
         """
-        return registry.get_models()
+        return self.registry.get_all_models()
 
     def build_prompt(self, message_data: MessageData) -> list[Message]:
         """Build the message list to send to the model."""
@@ -122,7 +124,7 @@ class Rag:
         system_msg: Message = self.system_message(mode)
         content: str = message_data.user_prompt
         history: list[Message] = message_data.chat_history
-        context: str = message_data.tim_context
+        context: str = message_data.context
         context_msg: Message = Message(
             # TODO: change role?
             role="user",
