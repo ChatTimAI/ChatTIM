@@ -6,6 +6,7 @@ import json
 from openai import OpenAI
 import numpy as np
 
+
 @dataclass
 class TextChunks:
     """text chunks to vectorize"""
@@ -34,9 +35,6 @@ class EmbeddingData:
     # filename: str
 
 
-# TODO tiedoston haku tietokannasta
-
-
 class TextChunkerHTML:
     def __init__(self, text: str):
         self.text = text
@@ -62,6 +60,7 @@ class TextChunkerHTML:
 
 
 class TextChunker:
+
     def __init__(self, text: str):
         self.text = text
 
@@ -71,6 +70,7 @@ class TextChunker:
 
     # splits every 600 characters, includes 100 from last chunk
     def split(self, chunk_size: int = 600, overlap: int = 100):
+
         chunks = []
         start = 0
         while start < len(self.text):
@@ -79,19 +79,22 @@ class TextChunker:
             start += chunk_size - overlap
         return TextChunks(chunks=chunks)
 
+    # splits the chunks at end of sentence and adds some overlap between chunks
     def split2(self, max_chunk_size: int = 600, overlap: int = 100):
         chunks = []
         sentences = self.text.split(". ")
         current_chunk = ""
+
         for sentence in sentences:
-            if (len(current_chunk) + len(sentence)) < max_chunk_size:
+            if ((len(current_chunk) + len(sentence)) < max_chunk_size):
                 current_chunk += sentence + ". "
             else:
                 chunks.append(current_chunk)
-                overlapping_text = current_chunk[overlap:]
-                current_chunk += overlapping_text + ". " + sentence
+                overlapping_text = current_chunk[-overlap:]
+                current_chunk = overlapping_text + ". " + sentence
         if (len(current_chunk)) > 0:
             chunks.append(current_chunk)
+        return TextChunks(chunks=chunks[0:20])
 
 
 # TODO mallin valinta,
@@ -106,20 +109,21 @@ class GeminiEmbeddingModel(EmbeddingModel):
     """gemini implementation of embedding model"""
 
     def __init__(self, api_key: str):
+
         self.api_key = api_key
-        self.client = genai.Client(api_key=self.api_key)
+        self.client = None
 
     def generate(self, chunks: TextChunks) -> EmbeddingResponse:
         """generates embeddings from provided chunks"""
+        if self.client is None:
+            self.client = genai.Client(api_key=self.api_key)
 
         text = chunks.chunks
 
         try:
-            result = self.client.models.embed_content(
-                model="gemini-embedding-001",
-                contents=text,
-            )
+            result = self.client.models.embed_content(model="gemini-embedding-001", contents=text, )
         except Exception as e:
+            print(f"Error generating embeddings {e}")
             return f"Error generating embeddings {e}"
         embeddings = [x.values for x in result.embeddings]
 
@@ -138,9 +142,7 @@ class OpenAiEmbeddingModel(EmbeddingModel):
         text = chunks.chunks
 
         try:
-            result = self.client.embeddings.create(
-                input=text, model="text-embedding-3-small"
-            )
+            result = self.client.embeddings.create(input=text, model="text-embedding-3-small")
         except Exception as r:
             print("Error generating embeddings", r)
             return EmbeddingResponse(embeddings=[])
@@ -149,65 +151,92 @@ class OpenAiEmbeddingModel(EmbeddingModel):
         return EmbeddingResponse(embeddings=embeddings)
 
 
-def create_embeddings():
-    """generates the data object containing embeddings and corresponding text chunks"""
+class Indexer:
+    def __init__(self, embedding_model: EmbeddingModel):
+        self.embedding_model = embedding_model
+        # self.text_chunker = text_chunker
+        self.data = []
 
-    with open("llm_wiki.htm", "r") as file:
-        page = file.read()
+    def chunk_text(self, text, max_chunk_size: int = 600, overlap: int = 100):
+        chunks = []
+        sentences = text.split(". ")
+        current_chunk = ""
 
-    chunks = TextChunkerHTML(page).split_paragraph()
+        for sentence in sentences:
+            if ((len(current_chunk) + len(sentence)) < max_chunk_size):
+                current_chunk += sentence + ". "
+            else:
+                chunks.append(current_chunk)
+                overlapping_text = current_chunk[-overlap:]
+                current_chunk = overlapping_text + ". " + sentence
+        if (len(current_chunk)) > 0:
+            chunks.append(current_chunk)
+        return TextChunks(chunks=chunks[0:20])
 
-    embeddings = GeminiEmbeddingModel(api_key="").generate(chunks)
-    # embeddings = self.generate(chunks)
-    ids = list(range(len(chunks.chunks)))
-    data = [
-        EmbeddingData(embedding=embedding, text=text, id=i)
-        for (embedding, text, i) in zip(embeddings.embeddings, chunks.chunks, ids)
-    ]
-    data_dict = [asdict(obj) for obj in data]
-    try:
-        with open("/tmp/embeddings.json", "w") as f:
-            json.dump(data_dict, f, indent=2)
-    except Exception as e:
-        return f"Error saving embeddings {e}"
-    return data
+    def get_page(self, doc_id=None):
+        with open("llm_wiki.htm", "r") as file:
+            page = file.read()
+        return page
 
+    def create_embeddings(self):
+        """generates the data object containing embeddings and corresponding text chunks"""
+        page = self.get_page()
 
-def get_embeddings():
-    try:
-        with open("/tmp/embeddings.json", "r") as file:
-            page_embeddings = json.load(file)
-    except Exception as e:
-        return f"Error retrieving embeddings {e}"
-    return page_embeddings
+        # chunks = self.text_chunker(page).split2()
 
+        chunks = self.chunk_text(page)
 
-def get_context(prompt: str, k: int = 5, doc_id: int = None):
-    prompt = TextChunks(chunks=[prompt])
-    try:
-        prompt_embedding = GeminiEmbeddingModel(api_key="").generate(prompt)
-        prompt_embedding = np.array(prompt_embedding.embeddings[0])
-    except Exception as e:
+        embeddings = self.embedding_model.generate(chunks)
+        # embeddings = self.generate(chunks)
+        ids = list(range(len(chunks.chunks)))
+        self.data = [
+            EmbeddingData(embedding=embedding, text=text, id=i)
+            for (embedding, text, i) in zip(embeddings.embeddings, chunks.chunks, ids)
+        ]
+        data_dict = [asdict(obj) for obj in self.data]
+        try:
+            with open("/tmp/embeddings.json", "w") as f:
+                json.dump(data_dict, f, indent=2)
+        except Exception as e:
+            print(f"Error saving embeddings {e}")
+            return f"Error saving embeddings {e}"
+        return self.data
 
-        return f'Prompt embedding error: {e}'
-    page_embeddings = get_embeddings()
+    def get_embeddings(self):
+        try:
+            with open("/tmp/embeddings.json", "r") as file:
+                page_embeddings = json.load(file)
+        except Exception as e:
+            print(f"Error retrieving embeddings {e}")
+            return f"Error retrieving embeddings {e}"
+        return page_embeddings
 
-    embeddings = []
-    texts = []
-    for chunk in page_embeddings:
-        embeddings.append(chunk["embedding"])
-        texts.append(chunk["text"])
-    embeddings = np.array(embeddings)
+    def get_context(self, prompt: str, k: int = 5, doc_id: int = None):
+        prompt = TextChunks(chunks=[prompt])
+        try:
+            prompt_embedding = self.embedding_model.generate(prompt)
+            prompt_embedding = np.array(prompt_embedding.embeddings[0])
+        except Exception as e:
 
-    # manual cosine similarity
-    dot_product = embeddings @ prompt_embedding
-    norm_embeddings = np.linalg.norm(embeddings, axis=1)
-    norm_prompt = np.linalg.norm(prompt_embedding)
-    similarities = dot_product / (norm_embeddings * norm_prompt)
+            return f'Prompt embedding error: {e}'
+        page_embeddings = self.get_embeddings()
 
-    data = [[t, e] for t, e in zip(texts, similarities)]
+        embeddings = []
+        texts = []
+        for chunk in page_embeddings:
+            embeddings.append(chunk["embedding"])
+            texts.append(chunk["text"])
+        embeddings = np.array(embeddings)
 
-    data.sort(key=lambda x: x[1], reverse=True)
+        # manual cosine similarity
+        dot_product = embeddings @ prompt_embedding
+        norm_embeddings = np.linalg.norm(embeddings, axis=1)
+        norm_prompt = np.linalg.norm(prompt_embedding)
+        similarities = dot_product / (norm_embeddings * norm_prompt)
 
-    best_chunks = data[0:k]
-    return best_chunks
+        data = [[t, e] for t, e in zip(texts, similarities)]
+
+        data.sort(key=lambda x: x[1], reverse=True)
+
+        best_chunks = data[0:k]
+        return best_chunks
