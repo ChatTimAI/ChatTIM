@@ -2,10 +2,9 @@ from google import genai
 from dataclasses import dataclass, asdict
 from typing import Protocol
 from bs4 import BeautifulSoup
-from sklearn.metrics.pairwise import cosine_similarity
 import json
 from openai import OpenAI
-
+import numpy as np
 
 @dataclass
 class TextChunks:
@@ -187,8 +186,10 @@ def get_context(prompt: str, k: int = 5, doc_id: int = None):
     prompt = TextChunks(chunks=[prompt])
     try:
         prompt_embedding = GeminiEmbeddingModel(api_key="").generate(prompt)
+        prompt_embedding = np.array(prompt_embedding.embeddings[0])
     except Exception as e:
-        return f"Prompt embedding error: {e}"
+
+        return f'Prompt embedding error: {e}'
     page_embeddings = get_embeddings()
 
     embeddings = []
@@ -196,8 +197,13 @@ def get_context(prompt: str, k: int = 5, doc_id: int = None):
     for chunk in page_embeddings:
         embeddings.append(chunk["embedding"])
         texts.append(chunk["text"])
+    embeddings = np.array(embeddings)
 
-    similarities = cosine_similarity(embeddings, prompt_embedding.embeddings)
+    # manual cosine similarity
+    dot_product = embeddings @ prompt_embedding
+    norm_embeddings = np.linalg.norm(embeddings, axis=1)
+    norm_prompt = np.linalg.norm(prompt_embedding)
+    similarities = dot_product / (norm_embeddings * norm_prompt)
 
     data = [[t, e] for t, e in zip(texts, similarities)]
 
