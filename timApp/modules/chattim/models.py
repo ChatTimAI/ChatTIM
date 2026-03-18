@@ -76,7 +76,7 @@ class Conversation(Base):
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
     agent_id: Mapped[int] = mapped_column(ForeignKey("agent.id"))
     plugin_instance_id: Mapped[int] = mapped_column(
-        ForeignKey("instances.id"), nullable=False
+        ForeignKey("instances.id"), nullable=True
     )
     started_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
 
