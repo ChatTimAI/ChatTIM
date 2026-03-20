@@ -1,4 +1,3 @@
-from google import genai
 from dataclasses import dataclass, asdict
 from typing import Protocol
 from bs4 import BeautifulSoup
@@ -116,16 +115,22 @@ class GeminiEmbeddingModel(EmbeddingModel):
     def generate(self, chunks: TextChunks) -> EmbeddingResponse:
         """generates embeddings from provided chunks"""
         if self.client is None:
-            self.client = genai.Client(api_key=self.api_key)
+            self.client = OpenAI(
+                api_key=self.api_key,
+                base_url="https://generativelanguage.googleapis.com/v1beta/openai/"
+            )
+            # self.client = genai.Client(api_key=self.api_key)
 
         text = chunks.chunks
 
         try:
-            result = self.client.models.embed_content(model="gemini-embedding-001", contents=text, )
+            result = self.client.embeddings.create(input=text, model="gemini-embedding-001")
+            # result = self.client.models.embed_content(model="gemini-embedding-001",contents=text,)
         except Exception as e:
             print(f"Error generating embeddings {e}")
             return f"Error generating embeddings {e}"
-        embeddings = [x.values for x in result.embeddings]
+
+        embeddings = [x.embedding for x in result.data]
 
         return EmbeddingResponse(embeddings=embeddings)
 
