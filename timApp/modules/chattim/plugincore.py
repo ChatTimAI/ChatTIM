@@ -1,4 +1,5 @@
 import os
+import time
 from enum import Enum
 from dataclasses import dataclass
 from timApp.modules.chattim.rag import (
@@ -11,7 +12,8 @@ from timApp.modules.chattim.rag import (
 )
 from typing import Generic, TypeVar
 
-from timApp.modules.chattim.model import ModelResponseChunk
+from timApp.modules.chattim.model import ModelResponseChunk, Usage
+from timApp.modules.chattim.conversation import ConversationManager, ChatMessage
 
 T = TypeVar("T")
 E = TypeVar("E")
@@ -44,10 +46,11 @@ class StudentPolicy:
 
 class PluginCore:
     rag: Rag = Rag()
+    history_manager: ConversationManager = ConversationManager()
 
     # TODO: palautetaan token usage tätä kautta tai muualta?
     def chat_request(
-        self, caller_id: str, document_id: int, user_input: str
+        self, caller_id: str, document_id: int, conversation_id: int, user_input: str,
     ) -> Result[str | None, str | None]:
         if not self._instance_exists(document_id):
             return Result(error=f"No instance with id {document_id} exists")
@@ -60,8 +63,12 @@ class PluginCore:
         if not result.ok():
             return result
 
+        timestamp_before = time.time_ns()
+        plugin_id = str(document_id)
+        history = self.history_manager.get_history(plugin_id, caller_id, str(conversation_id), 10)
+
         # TODO: fetch chat history
-        chat_history: list[Message] = []
+        chat_history: list[Message] = [Message(role=m.role, content=m.content) for m in history]
         # TODO: fetch mode for instance
         mode: RagMode = RagMode.RETRIEVE
         # TODO: how do we decide max tokens for request
@@ -80,11 +87,25 @@ class PluginCore:
         )
 
         whole_msg: str = ""
+        usage: Usage | None = None
         for chunk in iterable:
             if chunk.delta:
                 whole_msg += chunk.delta
+            if chunk.usage:
+                usage = chunk.usage
 
         # TODO: viestit arkistoidaan
+
+        timestamp_after = time.time_ns()
+        self.history_manager.append_messages(
+            plugin_id,
+            caller_id,
+            str(conversation_id),
+            [
+                ChatMessage(role="user", content=user_input, usage=None, timestamp=timestamp_before),
+                ChatMessage(role="assistant", content=whole_msg, usage=usage, timestamp=timestamp_after),
+            ],
+        )
 
         return Result(value=whole_msg, error=None)
 
