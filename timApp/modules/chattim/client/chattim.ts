@@ -88,7 +88,7 @@ export class ChatTIMComponent
         t.TypeOf<typeof PluginFields>,
         typeof PluginFields
     >
-    implements AfterViewInit
+    implements AfterViewInit, OnInit
 {
     answer?: string;
     error?: string;
@@ -105,6 +105,10 @@ export class ChatTIMComponent
         domSanitizer: DomSanitizer
     ) {
         super(el, http, domSanitizer);
+    }
+
+    ngOnInit() {
+        this.createPlugincoreInstance();
     }
 
     ngAfterViewInit() {
@@ -179,6 +183,29 @@ export class ChatTIMComponent
             this.answer = data.web.result;
             this.conversation.push({
                 user: this.userinput,
+                agent: this.answer,
+            });
+        } else {
+            this.error = response.result.error.error;
+        }
+    }
+    async createPlugincoreInstance() {
+        const user_id: string = String(Users.getCurrent().id);
+        const document_id: number = this.document_id;
+
+        const response = await this.httpPost<{
+            web: {result: string; error?: string};
+        }>("/chattim/create_instance", {
+            user_id,
+            document_id,
+        });
+
+        if (response.ok) {
+            const data = response.result;
+            this.error = data.web.error;
+            this.answer = data.web.result;
+            this.conversation.push({
+                user: "",
                 agent: this.answer,
             });
         } else {

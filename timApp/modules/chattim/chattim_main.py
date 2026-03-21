@@ -116,3 +116,17 @@ def define_ask_route():
     returnable = {"web": {"result": resp.value, "error": resp.error}}
 
     return json_response(returnable)
+
+
+@chattim.post("/create_instance")
+def define_create_instance():
+    data = request.get_json()
+    user_id = data.get("user_id")
+    document_id = data.get("document_id")
+
+    _plugincore.create_instance(user_id, document_id)
+
+    web: PluginAnswerWeb = {"result": "Instance created"}
+    result: PluginAnswerResp = {"web": web}
+
+    return json_response(result)

@@ -1,6 +1,5 @@
 from enum import Enum
 from dataclasses import dataclass
-from rag import Rag
 
 from timApp.modules.chattim.rag import (
     Rag,
