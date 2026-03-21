@@ -173,12 +173,9 @@ class GeminiEmbeddingModelREST(EmbeddingModel):
 
     def generate(self, chunks: TextChunks) -> EmbeddingResponse:
         """generates embeddings from provided chunks"""
-
         texts = chunks.chunks
-
         headers = {"Content-Type": "application/json", "x-goog-api-key": self.api_key}
-
-        payload = {
+        data = {
             "requests": [
                 {
                     "model": "models/gemini-embedding-001",
@@ -188,9 +185,8 @@ class GeminiEmbeddingModelREST(EmbeddingModel):
                 for text in texts
             ]
         }
-
         try:
-            response = requests.post(self.url, headers=headers, json=payload)
+            response = requests.post(self.url, headers=headers, json=data)
 
             # result = self.client.models.embed_content(model="gemini-embedding-001",contents=text,)
         except Exception as e:
@@ -199,6 +195,26 @@ class GeminiEmbeddingModelREST(EmbeddingModel):
 
         embeddings = [x["values"] for x in response.json()["embeddings"]]
 
+        return EmbeddingResponse(embeddings=embeddings)
+
+
+class OpenAiEmbedREST(EmbeddingModel):
+    def __init__(self, api_key: str):
+
+        self.api_key = api_key
+        self.url = "https://api.openai.com/v1/embeddings"
+
+    def generate(self, chunks):
+        headers = {
+            "Authorization": f"Bearer {self.api_key}",
+            "Content-Type": "application/json",
+        }
+        texts = chunks.chunks
+        data = {"input": texts, "model": "text-embedding-3-small"}
+        response = requests.post(self.url, headers=headers, json=data)
+        response = response.json()
+
+        embeddings = [x["embedding"] for x in response["data"]]
         return EmbeddingResponse(embeddings=embeddings)
 
 
@@ -225,20 +241,18 @@ class Indexer:
         return TextChunks(chunks=chunks[0:20])
 
     def get_page(self, doc_id=None):
-        with open("llm_wiki.htm", "r") as file:
+        with open("modules/chattim/testidata.txt", "r") as file:
             page = file.read()
         return page
 
-    def create_embeddings(self, text):
+    def create_embeddings(self):
         """generates the data object containing embeddings and corresponding text chunks"""
-        # page = self.get_page()
 
-        # chunks = self.text_chunker(page).split2()
-
+        text = self.get_page()
         chunks = self.chunk_text(text)
 
         embeddings = self.embedding_model.generate(chunks)
-        # embeddings = self.generate(chunks)
+
         ids = list(range(len(chunks.chunks)))
 
         self.data = [
