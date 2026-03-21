@@ -88,7 +88,7 @@ export class ChatTIMComponent
         t.TypeOf<typeof PluginFields>,
         typeof PluginFields
     >
-    implements AfterViewInit, OnInit
+    implements AfterViewInit
 {
     answer?: string;
     error?: string;
@@ -107,14 +107,11 @@ export class ChatTIMComponent
         super(el, http, domSanitizer);
     }
 
-    ngOnInit() {
-        this.createPlugincoreInstance();
-    }
-
     ngAfterViewInit() {
         /* calling this.pluginMeta.getTaskIdUrl() too
          early crashes thus we call in ngAfterViewInit */
         this.initDocId();
+        this.createPlugincoreInstance();
     }
 
     onEnter() {

@@ -15,7 +15,7 @@ from tim_common.pluginserver_flask import (
     create_nontask_blueprint,
 )
 
-_plugincore = PluginCore()
+plugincore = PluginCore()
 
 
 @dataclass
@@ -88,10 +88,9 @@ class PluginChatAnswer:
 counter = 0  # TODO: REMOVE ASAP
 
 
+# default route for questions and relaying answers from llm helper
 @chattim.post("/ask")
 def define_ask_route() -> Response:
-    global counter  # TODO: REMOVE ASAP
-
     # TODO: pitäisi varmaan muuttaa jotenkin tyyliin: define_ask_route(input: SomeDataClass) jne
     data = request.get_json()
     user_input = data.get("input")
@@ -106,25 +105,20 @@ def define_ask_route() -> Response:
     return json_response(result)
     """
 
-    if counter == 0:
-        _plugincore.create_instance(
-            user_id, document_id
-        )  # TODO: poista heti kun löydetään instanssin luomiselle joku route
-        counter = 1
-
-    resp = _plugincore.chat_request(user_id, document_id, user_input)
+    resp = plugincore.chat_request(user_id, document_id, user_input)
     returnable = {"web": {"result": resp.value, "error": resp.error}}
 
     return json_response(returnable)
 
 
+# Route for creating plugincoreinstance for helper
 @chattim.post("/create_instance")
 def define_create_instance() -> Response:
     data = request.get_json()
     user_id = data.get("user_id")
     document_id = data.get("document_id")
 
-    _plugincore.create_instance(user_id, document_id)
+    plugincore.create_instance(user_id, document_id)
 
     web: PluginAnswerWeb = {"result": "Instance created"}
     result: PluginAnswerResp = {"web": web}
