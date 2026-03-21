@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass, asdict
 from typing import Literal, Protocol, Callable, Iterable, Any, cast
 from enum import StrEnum
+import requests
 
 
 class ModelErrorKind(StrEnum):
@@ -351,3 +352,55 @@ def get_dummy_model() -> ChatModel:
             supports_streaming=True,
         )
     )
+
+
+class GeminiModelREST:
+    """gemini implementation of chat model"""
+
+    def __init__(self, api_key):
+        self.api_key = api_key
+
+    def generate(self, prompt, context):
+        model = "gemini-2.5-flash"
+
+        url = f"https://generativelanguage.googleapis.com/v1/models/{model}:generateContent"
+
+        headers = {"Content-Type": "application/json", "x-goog-api-key": self.api_key}
+        instruction = "Olet tekoälyavustaja. Vastaa käyttäjän kysymykseen käyttämällä ainoastaan tarjottua materiaalia. Jos et osaa, sano että et voi vastata tarjotun materiaalin perusteella Materiaali: "
+        data = {
+            "contents": [
+                {
+                    "role": "user",
+                    "parts": [
+                        {"text": f"{instruction}{context} Käyttäjän kysymys:  {prompt}"}
+                    ],
+                }
+            ]
+        }
+
+        try:
+            response = requests.post(url, headers=headers, json=data)
+            response = response.json()
+        except Exception as e:
+            return f"Error generating response: {e}"
+        return response["candidates"][0]["content"]["parts"][0]["text"]
+
+
+class OpenAiREST:
+    def __init__(self, api_key):
+        self.api_key = api_key
+
+    def generate(self, prompt, context=""):
+        url = "https://api.openai.com/v1/responses"
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {self.api_key}",
+        }
+        instruction = "Olet tekoälyavustaja. Vastaa käyttäjän kysymykseen käyttämällä ainoastaan tarjottua materiaalia. Jos et osaa, sano että et voi vastata tarjotun materiaalin perusteella Materiaali:"
+        data = {
+            "model": "gpt-4.1-mini",
+            "input": f"{context} Käyttäjän kysymys:{prompt}",
+        }
+        response = requests.post(url, headers=headers, json=data)
+        response = response.json()
+        return response["output"][0]["content"][0]["text"]
