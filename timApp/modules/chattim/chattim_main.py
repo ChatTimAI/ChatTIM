@@ -3,6 +3,8 @@ from typing import Any
 from flask import request
 from timApp.modules.chattim.plugincore import PluginCore
 
+from timApp.document.document import Document
+from timApp.modules.chattim.database_handler import TimDatabase
 from timApp.tim_app import csrf
 from timApp.util.flask.responsehelper import json_response
 from tim_common.markupmodels import GenericMarkupModel
