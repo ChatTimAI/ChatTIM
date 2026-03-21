@@ -2,7 +2,8 @@ from dataclasses import dataclass, asdict
 from typing import Protocol
 from bs4 import BeautifulSoup
 import json
-from openai import OpenAI
+
+# from openai import OpenAI
 import numpy as np
 
 
@@ -85,7 +86,7 @@ class TextChunker:
         current_chunk = ""
 
         for sentence in sentences:
-            if ((len(current_chunk) + len(sentence)) < max_chunk_size):
+            if (len(current_chunk) + len(sentence)) < max_chunk_size:
                 current_chunk += sentence + ". "
             else:
                 chunks.append(current_chunk)
@@ -99,8 +100,7 @@ class TextChunker:
 # TODO mallin valinta,
 #  mahdollisesti mallikohtaisia asetuksia?(task type,vektorin koko jne)
 class EmbeddingModel(Protocol):
-    def generate(self, text_chunks: TextChunks) -> EmbeddingResponse:
-        ...
+    def generate(self, text_chunks: TextChunks) -> EmbeddingResponse: ...
 
 
 # TODO virheiden käsittely,
@@ -117,14 +117,16 @@ class GeminiEmbeddingModel(EmbeddingModel):
         if self.client is None:
             self.client = OpenAI(
                 api_key=self.api_key,
-                base_url="https://generativelanguage.googleapis.com/v1beta/openai/"
+                base_url="https://generativelanguage.googleapis.com/v1beta/openai/",
             )
             # self.client = genai.Client(api_key=self.api_key)
 
         text = chunks.chunks
 
         try:
-            result = self.client.embeddings.create(input=text, model="gemini-embedding-001")
+            result = self.client.embeddings.create(
+                input=text, model="gemini-embedding-001"
+            )
             # result = self.client.models.embed_content(model="gemini-embedding-001",contents=text,)
         except Exception as e:
             print(f"Error generating embeddings {e}")
@@ -147,12 +149,56 @@ class OpenAiEmbeddingModel(EmbeddingModel):
         text = chunks.chunks
 
         try:
-            result = self.client.embeddings.create(input=text, model="text-embedding-3-small")
+            result = self.client.embeddings.create(
+                input=text, model="text-embedding-3-small"
+            )
         except Exception as r:
             print("Error generating embeddings", r)
             return EmbeddingResponse(embeddings=[])
 
         embeddings = [x.embedding for x in result.data]
+        return EmbeddingResponse(embeddings=embeddings)
+
+
+import requests
+
+
+class GeminiEmbeddingModelREST(EmbeddingModel):
+    """gemini implementation of embedding model"""
+
+    def __init__(self, api_key: str):
+
+        self.api_key = api_key
+        self.url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-embedding-001:batchEmbedContents"
+
+    def generate(self, chunks: TextChunks) -> EmbeddingResponse:
+        """generates embeddings from provided chunks"""
+
+        texts = chunks.chunks
+
+        headers = {"Content-Type": "application/json", "x-goog-api-key": self.api_key}
+
+        payload = {
+            "requests": [
+                {
+                    "model": "models/gemini-embedding-001",
+                    "content": {"parts": [{"text": text}]},
+                    # "taskType": "RETRIEVAL_DOCUMENT"
+                }
+                for text in texts
+            ]
+        }
+
+        try:
+            response = requests.post(self.url, headers=headers, json=payload)
+
+            # result = self.client.models.embed_content(model="gemini-embedding-001",contents=text,)
+        except Exception as e:
+            print(f"Error generating embeddings {e}")
+            return f"Error generating embeddings {e}"
+
+        embeddings = [x["values"] for x in response.json()["embeddings"]]
+
         return EmbeddingResponse(embeddings=embeddings)
 
 
@@ -168,7 +214,7 @@ class Indexer:
         current_chunk = ""
 
         for sentence in sentences:
-            if ((len(current_chunk) + len(sentence)) < max_chunk_size):
+            if (len(current_chunk) + len(sentence)) < max_chunk_size:
                 current_chunk += sentence + ". "
             else:
                 chunks.append(current_chunk)
@@ -183,24 +229,26 @@ class Indexer:
             page = file.read()
         return page
 
-    def create_embeddings(self):
+    def create_embeddings(self, text):
         """generates the data object containing embeddings and corresponding text chunks"""
-        page = self.get_page()
+        # page = self.get_page()
 
         # chunks = self.text_chunker(page).split2()
 
-        chunks = self.chunk_text(page)
+        chunks = self.chunk_text(text)
 
         embeddings = self.embedding_model.generate(chunks)
         # embeddings = self.generate(chunks)
         ids = list(range(len(chunks.chunks)))
+
         self.data = [
             EmbeddingData(embedding=embedding, text=text, id=i)
             for (embedding, text, i) in zip(embeddings.embeddings, chunks.chunks, ids)
         ]
         data_dict = [asdict(obj) for obj in self.data]
+
         try:
-            with open("/tmp/embeddings.json", "w") as f:
+            with open("modules/chattim/embeddings2.json", "w") as f:
                 json.dump(data_dict, f, indent=2)
         except Exception as e:
             print(f"Error saving embeddings {e}")
@@ -209,7 +257,7 @@ class Indexer:
 
     def get_embeddings(self):
         try:
-            with open("/tmp/embeddings.json", "r") as file:
+            with open("modules/chattim/embeddings2.json", "r") as file:
                 page_embeddings = json.load(file)
         except Exception as e:
             print(f"Error retrieving embeddings {e}")
@@ -223,7 +271,7 @@ class Indexer:
             prompt_embedding = np.array(prompt_embedding.embeddings[0])
         except Exception as e:
 
-            return f'Prompt embedding error: {e}'
+            return f"Prompt embedding error: {e}"
         page_embeddings = self.get_embeddings()
 
         embeddings = []
@@ -244,4 +292,8 @@ class Indexer:
         data.sort(key=lambda x: x[1], reverse=True)
 
         best_chunks = data[0:k]
-        return best_chunks
+        context = []
+
+        [context.append(text) for text, similarity in best_chunks]
+
+        return context
