@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from typing import Any
-from flask import request
+from flask import request, Response
 from timApp.modules.chattim.plugincore import PluginCore
 
 from timApp.tim_app import csrf
@@ -89,7 +89,7 @@ counter = 0  # TODO: REMOVE ASAP
 
 
 @chattim.post("/ask")
-def define_ask_route():
+def define_ask_route() -> Response:
     global counter  # TODO: REMOVE ASAP
 
     # TODO: pitäisi varmaan muuttaa jotenkin tyyliin: define_ask_route(input: SomeDataClass) jne
@@ -119,7 +119,7 @@ def define_ask_route():
 
 
 @chattim.post("/create_instance")
-def define_create_instance():
+def define_create_instance() -> Response:
     data = request.get_json()
     user_id = data.get("user_id")
     document_id = data.get("document_id")
