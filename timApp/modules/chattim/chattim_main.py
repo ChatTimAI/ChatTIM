@@ -35,7 +35,6 @@ class ChatTimHtmlModel(
     def get_component_html_name(self) -> str:
         return "chattim-runner"
 
-
 def reqs() -> PluginReqs:
     templates = [
         """

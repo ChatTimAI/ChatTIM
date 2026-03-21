@@ -13,17 +13,17 @@ import type {
     DoBootstrap,
     OnInit,
 } from "@angular/core";
-import {Component, NgModule, ElementRef} from "@angular/core";
-import {HttpClient, HttpClientModule} from "@angular/common/http";
-import {FormsModule} from "@angular/forms";
-import {TimUtilityModule} from "tim/ui/tim-utility.module";
-import {AngularPluginBase} from "tim/plugin/angular-plugin-base.directive";
-import {DialogModule} from "tim/ui/angulardialog/dialog.module";
-import {PurifyModule} from "tim/util/purify.module";
-import {registerPlugin} from "tim/plugin/pluginRegistry";
-import {CommonModule} from "@angular/common";
-import {DomSanitizer} from "@angular/platform-browser";
-import {Users} from "tim/user/userService";
+import { Component, NgModule, ElementRef } from "@angular/core";
+import { HttpClient, HttpClientModule } from "@angular/common/http";
+import { FormsModule } from "@angular/forms";
+import { TimUtilityModule } from "tim/ui/tim-utility.module";
+import { AngularPluginBase } from "tim/plugin/angular-plugin-base.directive";
+import { DialogModule } from "tim/ui/angulardialog/dialog.module";
+import { PurifyModule } from "tim/util/purify.module";
+import { registerPlugin } from "tim/plugin/pluginRegistry";
+import { CommonModule } from "@angular/common";
+import { DomSanitizer } from "@angular/platform-browser";
+import { Users } from "tim/user/userService";
 
 const PluginMarkupFields = t.intersection([
     t.partial({
@@ -37,7 +37,7 @@ const PluginMarkupFields = t.intersection([
 const PluginFields = t.intersection([
     getTopLevelFields(PluginMarkupFields),
     t.type({
-        state: nullable(t.type({userinput: t.string})),
+        state: nullable(t.type({ userinput: t.string })),
     }),
 ]);
 
@@ -88,8 +88,7 @@ export class ChatTIMComponent
         t.TypeOf<typeof PluginFields>,
         typeof PluginFields
     >
-    implements AfterViewInit
-{
+    implements AfterViewInit {
     answer?: string;
     error?: string;
     isRunning = false;
@@ -165,7 +164,7 @@ export class ChatTIMComponent
         const document_id: number = this.document_id;
 
         const response = await this.httpPost<{
-            web: {result: string; error?: string};
+            web: { result: string; error?: string };
         }>("/chattim/ask", {
             input,
             user_id,
@@ -199,7 +198,7 @@ export class ChatTIMComponent
     ],
 })
 export class ChatTIMModule implements DoBootstrap {
-    ngDoBootstrap(appRef: ApplicationRef) {}
+    ngDoBootstrap(appRef: ApplicationRef) { }
 }
 
 registerPlugin("chattim-runner", ChatTIMModule, ChatTIMComponent);
