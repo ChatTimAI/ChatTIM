@@ -1,0 +1,38 @@
+Alempana löytyy vanha loppudemon ohje, jota sovelletaan välidemoon:
+
+    Nyt on vain yksi ryhmä niin voi esitellä rennommalla tahdilla ilman mitään turhia kiireitä tai aikataulupaineita. Miettikää, suunnitelkaa ja harjoitelkaa esitykselle silti järkevä pituus
+    Ulkoista yleisöä on korkeintaan muutama yksittäinen henkilö
+    Esitelkää projektia suhteessa nykytilanteeseen. Eli valmiin tuotoksen sijaan:
+        Mitä ollaan tekemässä
+        Mitä on saatu aikaan
+        Mitä on suunnitelmissa
+    Suhteuttakaa samaa muihinkin kohtiin. Esim läpiviennissä ja kokemuksissa kannattaa käydä läpi miten asiat on olleet tähän asti, miten jatkossa, miten ehkä kehitetään toimintatapoja jatkossa jne
+    Viimeistä kohtaa (koneen yhdistämisen testaamista) ei välttämättä pääse tekemään, sillä saliin ei taida päästä ilman henkilökunnan kulkukorttia. Valmistautukaa silti tuohon parhaan mukaan:
+        Katsokaa että ainakin yhdellä, mielellään varuilta useammalla henkilöllä on läppäri jossa on toimiva hdmi-portti jolla jakaa näyttöä
+        Miettikää etukäteen kenen konetta käytetään esityksessä
+        Tarvittaessa esittävä kone voi olla eri kuin näyttöön kytketty kone (ruudunjako palaveriohjelman kautta)
+    Muilta osin seuratkaa alla olevaa ohjetta ja kyselkää tarvittaessa lisää
+
+Loppudemo
+
+Sovellusprojektin loppuesittely on tärkeä osa projektin onnistumista. Se on projektin mainostilaisuus, jossa yleisönä on muiden projektiryhmien, tilaajien edustajien ja ohjaajien lisäksi mm. laitoksen henkilökuntaa ja opiskelijoita. Loppuesittelyyn kuuluvat
+
+    etukäteen suunniteltu ja jäsennelty esitys,
+    projektin taustojen ja tavoitteiden kuvaus,
+    sovelluksen kokonaisrakenteen, toteutusratkaisujen ja työkalujen kuvaus,
+    sovelluksen toiminnan esittely käytännössä, sekä
+    projektin läpiviennin toteutuman ja kokemusten tiivis kuvaus.
+
+Kullekin projektille varataan korkeintaan 20 minuuttia aikaa projektinsa esittelyyn, jottei yleisö pitkästyisi usean projektin esittelyssä. Kyseiset 20 minuuttia kuluvat yllättävän nopeasti, joten esitys tulee suunnitella ja harjoitella etukäteen. älkää ylittäkö teille varattua aikaa, sillä tuolloin muiden ryhmien esittelyille jää vastaavasti vähemmän aikaa. Kunkin ryhmän esittelyn jälkeen yleisöllä on kymmenisen minuuttia 20 aikaa esittää kysymyksiä ja kommentteja, sekä tilaajan edustajat ja ohjaajat arvioivat kehitettyä sovellusta ja projektin läpivientiä. Loppuesittelyssä tulee kiinnittää huomiota ainakin seuraaviin seikkoihin:
+
+    Ryhmän jäsenten tulee osallistua tasapuolisesti esittelyyn jakamalla se sopiviin kokonaisuuksiin keskenään. Tällöin kuulijat saavat käsityksen yhtenäisestä ryhmästä, jonka kaikki jäsenet ovat osallistuneet tasapuolisesti työhön.
+    Englanninkielisiä ja yleisölle outoja aihealueen ja tietotekniikan termejä tulee välttää tai niiden merkitys tulee selkeästi selittää.
+    Ryhmän jäsenten tulee esitellä itsensä, tilaajan edustajat ja ohjaajat.
+    Ilman projektin taustojen lyhyttä esittelyä kuulijat eivät saa aihealueesta ja siten tilaajan kokonaistavoitteista ja käyttäjien tarpeista riittävää kokonaiskäsitystä.
+    Ohjelmointiympäristö työkaluineen tulee esitellä.
+    Sovelluksen rakenne ja toteutus tulee kuvata olennaisimmilta osin. Liian pikkutarkka kuvaus aiheuttaa pitkästyneisyyttä yleisön joukossa. Jos joku kuulijoista on kiinnostunut yksityiskohdista, hänellä on mahdollisuus esittää asiaa koskeva kysymys tai ottaa ryhmään yhteyttä esityksen jälkeen.
+    Sovelluksen toimintaa tulee esitellä ”juonellisesti” (käytöllä tähdätään johonkin tavoitteeseen) ainakin oleellisimpien tietojen ja toimintojen osalta. Esittelyn tulee edetä rauhallisesti selittäen, mitä kussakin vaiheessa tehdään. Normaalilla sovelluksen käyttönopeudella valkokankaalla näkyy vain sovelluksen ikkunoiden ja valikoiden vilkuntaa. Yleisön tulisi siis pysyä esityksessä mukana.
+    Projektin läpivientiä sekä jäsenten kokemuksia ja oppimista tulee kuvata lyhyesti.
+    Loppuesittelyn jälkeen esitettäviin kysymyksiin kuuluvat perinteisesti seuraavat: mikä oli vaikeaa, mitä opitte ja mitä tekisitte toisin. Jos ette puutu näihin kysymyksiin esittelyssänne, niihin kannattaa ainakin valmistautua pohtimalla niitä etukäteen.
+    Esityssalissa olevien mikrofonien käyttö on suositeltavaa etenkin, jos esittelijä ei ole tottunut käyttämään ääntään isossa tilassa. Huonosti kuuluvan loppuesittelyn anti jää auttamattomasti alhaiseksi
+    Projektiryhmän tulee varmistaa sovelluksen toimivuus esityksessä käytettävässä koneessa jo ennen esittelyn alkua (mielellään jo edellisenä iltana). Toimimattoman ohjelman esitteleminen yleisölle on kokemusten mukaan melko nolo tilanne. Käyttäkää esittelyssä mieluummin vanhempaa toimivaksi todettua versiota kuin viimeisintä testaamatonta versiota. Tällöin on vähemmän ongelmia odotettavissa, vaikka uudessa versiossa olisikin huomattavasti enemmän toimintoja. Viime hetkellä toteutetut näyttävät osiot eivät siis mitenkään korvaa sovelluksen toimimattomuutta.
