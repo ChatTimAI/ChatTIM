@@ -324,6 +324,7 @@ class ModelRegistry:
         model_id: str,
     ) -> ModelInfo | None:
         """Get model info for a specific model."""
+
         models = self.supported_models.get(provider, [])
         for model in models:
             if model.model_id == model_id:
