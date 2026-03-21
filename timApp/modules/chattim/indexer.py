@@ -2,11 +2,13 @@ from dataclasses import dataclass, asdict
 from typing import Protocol
 from bs4 import BeautifulSoup
 import json
+import requests
 
 # from openai import OpenAI
 import numpy as np
 
 
+# TODO mallien määrittely/valinta Indexer luokkaan?
 @dataclass
 class TextChunks:
     """text chunks to vectorize"""
@@ -103,7 +105,6 @@ class EmbeddingModel(Protocol):
     def generate(self, text_chunks: TextChunks) -> EmbeddingResponse: ...
 
 
-# TODO virheiden käsittely,
 class GeminiEmbeddingModel(EmbeddingModel):
     """gemini implementation of embedding model"""
 
@@ -160,9 +161,6 @@ class OpenAiEmbeddingModel(EmbeddingModel):
         return EmbeddingResponse(embeddings=embeddings)
 
 
-import requests
-
-
 class GeminiEmbeddingModelREST(EmbeddingModel):
     """gemini implementation of embedding model"""
 
@@ -171,6 +169,7 @@ class GeminiEmbeddingModelREST(EmbeddingModel):
         self.api_key = api_key
         self.url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-embedding-001:batchEmbedContents"
 
+    # TODO task tyypin valinta? jos tätä halutaan käyttää
     def generate(self, chunks: TextChunks) -> EmbeddingResponse:
         """generates embeddings from provided chunks"""
         texts = chunks.chunks
@@ -180,7 +179,6 @@ class GeminiEmbeddingModelREST(EmbeddingModel):
                 {
                     "model": "models/gemini-embedding-001",
                     "content": {"parts": [{"text": text}]},
-                    # "taskType": "RETRIEVAL_DOCUMENT"
                 }
                 for text in texts
             ]
@@ -188,7 +186,6 @@ class GeminiEmbeddingModelREST(EmbeddingModel):
         try:
             response = requests.post(self.url, headers=headers, json=data)
 
-            # result = self.client.models.embed_content(model="gemini-embedding-001",contents=text,)
         except Exception as e:
             print(f"Error generating embeddings {e}")
             return f"Error generating embeddings {e}"
@@ -218,6 +215,7 @@ class OpenAiEmbedREST(EmbeddingModel):
         return EmbeddingResponse(embeddings=embeddings)
 
 
+# TODO tekstin paloitteluun eri vaihtoehtoja
 class Indexer:
     def __init__(self, embedding_model: EmbeddingModel):
         self.embedding_model = embedding_model
