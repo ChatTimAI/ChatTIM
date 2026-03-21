@@ -28,13 +28,13 @@ class ChatModel(Protocol):
     """An abstract model class for generating responses."""
 
     def generate(
-        self, messages: list[Message], options: GenerateOptions
+            self, messages: list[Message], options: GenerateOptions
     ) -> ModelResponse:
         """Generate a model response from the given messages."""
         ...
 
     def generate_stream(
-        self, messages: list[Message], options: GenerateOptions
+            self, messages: list[Message], options: GenerateOptions
     ) -> Iterable[ModelResponseChunk]:
         """
         Generate a model response from the given messages.
@@ -118,6 +118,67 @@ class ModelInfo:
     supports_streaming: bool = False
 
 
+class DemoGenericApiChatModel(ChatModel):
+    """
+    `ChatModel` made for demo purposes. Not using the `openai` python package.
+    """
+
+    def __init__(self, info: ModelInfo, api_key: str, base_url: str):
+        self._info = info
+        self._api_key = api_key
+        self._base_url = base_url
+
+    def generate(
+            self, messages: list[Message], options: GenerateOptions
+    ) -> ModelResponse:
+        res = self.create_completion(options=options, messages=messages)
+        return ModelResponse(content=res[0], usage=res[1])
+
+    def generate_stream(
+            self, messages: list[Message], options: GenerateOptions
+    ) -> Iterable[ModelResponseChunk]:
+        res = self.generate(messages=messages, options=options)
+        yield ModelResponseChunk(delta=res.content, usage=res.usage, done=True)
+
+    def get_info(self) -> ModelInfo:
+        return self._info
+
+    def create_completion(
+            self,
+            messages: list[Message],
+            options: GenerateOptions,
+            stream: bool = False,
+    ) -> tuple[str, Usage]:
+        """Create a completion response from the given messages."""
+        msgs: list[dict[str, str]] = [asdict(m) for m in messages]
+        temperature = options.temperature if self._info.supports_temperature else None
+
+        url = self._base_url.rstrip("/") + "/chat/completions"
+        headers = {
+            "Authorization": f"Bearer {self._api_key}",
+            "Content-Type": "application/json",
+        }
+        payload = {
+            "model": self._info.model_id,
+            "messages": msgs,
+            "temperature": temperature,
+        }
+        response = requests.post(url, headers=headers, json=payload, timeout=60)
+        if response.status_code == 200:
+            data = response.json()
+            usage = data.get("usage")
+            return (
+                data["choices"][0]["message"]["content"],
+                Usage(
+                    completion_tokens=usage['completion_tokens'],
+                    prompt_tokens=usage['prompt_tokens'],
+                    total_tokens=usage['total_tokens'],
+                ),
+            )
+        print('Error with request:', response.status_code)
+        return f"Error with request ({response.status_code})", Usage(0, 0, 0)
+
+
 class GenericApiChatModel(ChatModel):
     """
     `ChatModel` implementation for providers that are OpenAI SDK compatible.
@@ -136,7 +197,7 @@ class GenericApiChatModel(ChatModel):
         self._client = OpenAI(api_key=self._api_key, base_url=self._base_url)
 
     def generate(
-        self, messages: list[Message], options: GenerateOptions
+            self, messages: list[Message], options: GenerateOptions
     ) -> ModelResponse:
         """Generate a model response from the given messages."""
         res = self.create_completion(options=options, messages=messages)
@@ -145,7 +206,7 @@ class GenericApiChatModel(ChatModel):
         return ModelResponse(content=message_content, usage=usage)
 
     def generate_stream(
-        self, messages: list[Message], options: GenerateOptions
+            self, messages: list[Message], options: GenerateOptions
     ) -> Iterable[ModelResponseChunk]:
         """
         Generate a model response from the given messages.
@@ -183,7 +244,7 @@ class GenericApiChatModel(ChatModel):
 
     @staticmethod
     def get_usage(
-        usage: Any,
+            usage: Any,
     ) -> Usage | None:
         """Convert completion usage to `Usage`"""
         if not usage:
@@ -195,10 +256,10 @@ class GenericApiChatModel(ChatModel):
         )
 
     def create_completion(
-        self,
-        messages: list[Message],
-        options: GenerateOptions,
-        stream: bool = False,
+            self,
+            messages: list[Message],
+            options: GenerateOptions,
+            stream: bool = False,
     ):
         """Create a completion response from the given messages."""
         client = self._client
@@ -227,6 +288,22 @@ class OpenAiChatModel(GenericApiChatModel):
         super().__init__(info, api_key, base_url)
 
 
+class AnthropicChatModel(GenericApiChatModel):
+    """`ChatModel` implementation for Anthropic models."""
+
+    def __init__(self, info: ModelInfo, api_key: str, base_url: str | None = None):
+        _base_url = (base_url or "https://api.anthropic.com/v1").rstrip("/")
+        super().__init__(info, api_key, base_url)
+
+
+class GoogleChatModel(GenericApiChatModel):
+    """`ChatModel` implementation for Google Gemini models."""
+
+    def __init__(self, info: ModelInfo, api_key: str, base_url: str | None = None):
+        _base_url = (base_url or "https://generativelanguage.googleapis.com/v1beta/openai").rstrip("/")
+        super().__init__(info, api_key, base_url)
+
+
 class DummyChatModel(ChatModel):
     """A dummy chat model for testing."""
 
@@ -234,7 +311,7 @@ class DummyChatModel(ChatModel):
         self._info = info
 
     def generate(
-        self, messages: list[Message], options: GenerateOptions
+            self, messages: list[Message], options: GenerateOptions
     ) -> ModelResponse:
         return ModelResponse(
             content="This is a dummy response",
@@ -242,7 +319,7 @@ class DummyChatModel(ChatModel):
         )
 
     def generate_stream(
-        self, messages: list[Message], options: GenerateOptions
+            self, messages: list[Message], options: GenerateOptions
     ) -> Iterable[ModelResponseChunk]:
         return [
             ModelResponseChunk(delta="This", usage=None, done=False),
@@ -288,6 +365,13 @@ class ModelRegistry:
                 supports_temperature=True,
                 supports_streaming=True,
             ),
+            ModelInfo(
+                provider="openai",
+                model_id="gpt-4o-mini",
+                label="GPT-4o Mini",
+                supports_temperature=True,
+                supports_streaming=True,
+            ),
         ],
         "dummy": [
             ModelInfo(
@@ -319,9 +403,9 @@ class ModelRegistry:
         return self.supported_models.copy()
 
     def get_model_info(
-        self,
-        provider: Provider,
-        model_id: str,
+            self,
+            provider: Provider,
+            model_id: str,
     ) -> ModelInfo | None:
         """Get model info for a specific model."""
 
@@ -347,14 +431,47 @@ class ModelRegistry:
         return init_fn(info, spec.api_key, spec.base_url)
 
 
+def init_openai(info, key, url):
+    """Init function made for demo purposes."""
+    try:
+        from openai import OpenAI, types, AsyncOpenAI  # type: ignore
+        return OpenAiChatModel(info, key, url),
+    except ModuleNotFoundError:
+        base_url = (url or "https://api.openai.com/v1").rstrip("/")
+        return DemoGenericApiChatModel(info, key, base_url)
+
+
+def init_anthropic(info, key, url):
+    """Init function made for demo purposes."""
+    try:
+        from openai import OpenAI, types, AsyncOpenAI  # type: ignore
+        return AnthropicChatModel(info, key, url),
+    except ModuleNotFoundError:
+        base_url = (url or "https://api.anthropic.com/v1").rstrip("/")
+        return DemoGenericApiChatModel(info, key, base_url)
+
+
+def init_google(info, key, url):
+    """Init function made for demo purposes."""
+    try:
+        from openai import OpenAI, types, AsyncOpenAI  # type: ignore
+        return AnthropicChatModel(info, key, url),
+    except ModuleNotFoundError:
+        base_url = (url or "https://generativelanguage.googleapis.com/v1beta/openai").rstrip("/")
+        return DemoGenericApiChatModel(info, key, base_url)
+
+
 # TODO: add more providers
-Provider = Literal["openai", "dummy"]
+Provider = Literal["openai", "anthropic", "google", "dummy"]
 
 ProviderInitFn = Callable[[ModelInfo, str, str | None], ChatModel]
 """Function type for initializing `Model` instances from different providers."""
 
 PROVIDERS: dict[Provider, ProviderInitFn] = {
-    "openai": lambda info, key, url: OpenAiChatModel(info, key, url),
+    #"openai": lambda info, key, url: OpenAiChatModel(info, key, url),
+    "openai": init_openai,
+    "anthropic": init_anthropic,
+    "google": init_google,
     "dummy": lambda info, key, url: DummyChatModel(info),
 }
 """All the supported providers."""

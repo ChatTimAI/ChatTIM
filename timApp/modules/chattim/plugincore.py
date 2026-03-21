@@ -1,3 +1,4 @@
+import os
 from enum import Enum
 from dataclasses import dataclass
 from timApp.modules.chattim.rag import (
@@ -93,16 +94,22 @@ class PluginCore:
 
         # TODO: tälle joku helpompi tapa vetää spec infosta tai jotain (tämä muutenkin väliaikainen)
         supp_models = self.rag.get_supported_models()
-        dummy_model = supp_models.get("dummy")[0]
-        dummy_spec = ModelSpec(
-            provider=dummy_model.provider,
-            model_id=dummy_model.model_id,
-            api_key="dummy_api_key",
-        )
-        self.rag.add_model(
-            dummy_spec,
-            identifier=document_id,
-        )
+        openai_api_key = os.getenv("OPENAI_API_KEY")
+        if openai_api_key is not None:
+            model = supp_models.get("openai")[0]
+            spec = ModelSpec(
+                provider=model.provider,
+                model_id=model.model_id,
+                api_key=openai_api_key,
+            )
+        else:
+            model = supp_models.get("dummy")[0]
+            spec = ModelSpec(
+                provider=model.provider,
+                model_id=model.model_id,
+                api_key="dummy_api_key",
+            )
+        self.rag.add_model(spec, identifier=document_id)
         # TODO: lisää tietokantaan policyineen
         # TODO: indeksoinnit pyörimään
 
