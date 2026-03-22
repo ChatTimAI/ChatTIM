@@ -85,9 +85,6 @@ class PluginChatAnswer:
     error: str
 
 
-counter = 0  # TODO: REMOVE ASAP
-
-
 # default route for questions and relaying answers from llm helper
 @chattim.post("/ask")
 def define_ask_route() -> Response:
@@ -96,14 +93,6 @@ def define_ask_route() -> Response:
     user_input = data.get("input")
     user_id = data.get("user_id")
     document_id = data.get("document_id")
-
-    # TODO: kytke plugincoreen
-    """
-    web: PluginAnswerWeb = {"result": "hello from server"}
-    result: PluginAnswerResp = {"web": web}
-
-    return json_response(result)
-    """
 
     resp = plugincore.chat_request(user_id, document_id, user_input)
     returnable = {"web": {"result": resp.value, "error": resp.error}}
