@@ -60,15 +60,12 @@ export interface ChatEntry {
                             <pre class="chat-bot" [innerHTML]="entry.agent | purify"></pre>
                         </div>
                     </div>
-                
-
-                
                     <div class="form-inline">
                         <label>{{inputstem}}
                             <input type="text"
                                    class="form-control"
                                    [(ngModel)]="userinput"
-                                   (keyup.enter)="onEnter()"    
+                                   (keyup.enter)="onEnter()"
                             >
                         </label>
                         <button class="timButton"
@@ -97,7 +94,7 @@ export class ChatTIMComponent
         t.TypeOf<typeof PluginFields>,
         typeof PluginFields
     >
-    implements AfterViewInit, OnInit
+    implements AfterViewInit
 {
     answer?: string;
     error?: string;
@@ -119,11 +116,6 @@ export class ChatTIMComponent
         domSanitizer: DomSanitizer
     ) {
         super(el, http, domSanitizer);
-    }
-
-    ngOnInit() {
-        // FIX: This can sometimes run too early, when doc id is uninitialized.
-        // this.createPlugincoreInstance();
     }
 
     ngAfterViewInit() {

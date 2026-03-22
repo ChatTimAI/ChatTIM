@@ -18,7 +18,7 @@ from tim_common.pluginserver_flask import (
     create_nontask_blueprint,
 )
 
-_plugincore = PluginCore()
+plugincore = PluginCore()
 
 
 @dataclass
@@ -37,6 +37,7 @@ class ChatTimHtmlModel(
 ):
     def get_component_html_name(self) -> str:
         return "chattim-runner"
+
 
 def reqs() -> PluginReqs:
     templates = [
@@ -87,6 +88,7 @@ class PluginChatAnswer:
     error: str
 
 
+# default route for questions and relaying answers from llm helper
 @chattim.post("/ask")
 def define_ask_route() -> Response:
     # TODO: pitäisi varmaan muuttaa jotenkin tyyliin: define_ask_route(input: SomeDataClass) jne
@@ -96,19 +98,20 @@ def define_ask_route() -> Response:
     document_id = data.get("document_id")
     conversation_id = data.get("conversation_id")
 
-    resp = _plugincore.chat_request(user_id, document_id, conversation_id, user_input)
+    resp = plugincore.chat_request(user_id, document_id, conversation_id, user_input)
     returnable = {"web": {"result": resp.value, "error": resp.error}}
 
     return json_response(returnable)
 
 
+# Route for creating plugincoreinstance for helper
 @chattim.post("/create_instance")
 def define_create_instance() -> Response:
     data = request.get_json()
     user_id = data.get("user_id")
     document_id = data.get("document_id")
 
-    _plugincore.create_instance(user_id, document_id)
+    plugincore.create_instance(user_id, document_id)
 
     web: PluginAnswerWeb = {"result": "Instance created"}
     result: PluginAnswerResp = {"web": web}
