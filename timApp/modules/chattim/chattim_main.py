@@ -97,11 +97,13 @@ def define_ask_route() -> Response:
     document_id = data.get("document_id")
     session_user_id = str(get_current_user_id())
 
-    resp = plugincore.chat_request(session_user_id, document_id, user_input)
-    returnable = {"web": {"result": resp.value, "error": resp.error}}
     if user_id != session_user_id:
         pass
         # TODO onko tarkistus tarpeellinen, vai käytetäänkö vain session_user_id?
+
+    resp = plugincore.chat_request(session_user_id, document_id, user_input)
+    returnable = {"web": {"result": resp.value, "error": resp.error}}
+
     return json_response(returnable)
 
 
@@ -111,8 +113,13 @@ def define_create_instance() -> Response:
     data = request.get_json()
     user_id = data.get("user_id")
     document_id = data.get("document_id")
+    session_user_id = str(get_current_user_id())
 
-    plugincore.create_instance(user_id, document_id)
+    if user_id != session_user_id:
+        pass
+        # TODO onko tarkistus tarpeellinen, vai käytetäänkö vain session_user_id?
+
+    plugincore.create_instance(session_user_id, document_id)
 
     web: PluginAnswerWeb = {"result": "Instance created"}
     result: PluginAnswerResp = {"web": web}
