@@ -1,6 +1,8 @@
 from dataclasses import dataclass
 from typing import Any
 from flask import request, Response
+
+from timApp.auth.sessioninfo import get_current_user_id
 from timApp.modules.chattim.plugincore import PluginCore
 
 from timApp.tim_app import csrf
@@ -93,10 +95,13 @@ def define_ask_route() -> Response:
     user_input = data.get("input")
     user_id = data.get("user_id")
     document_id = data.get("document_id")
+    session_user_id = str(get_current_user_id())
 
-    resp = plugincore.chat_request(user_id, document_id, user_input)
+    resp = plugincore.chat_request(session_user_id, document_id, user_input)
     returnable = {"web": {"result": resp.value, "error": resp.error}}
-
+    if user_id != session_user_id:
+        pass
+        # TODO onko tarkistus tarpeellinen, vai käytetäänkö vain session_user_id?
     return json_response(returnable)
 
 
