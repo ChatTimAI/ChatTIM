@@ -1,15 +1,7 @@
-import os
 from dataclasses import dataclass
 from typing import Any
 from flask import request
 
-
-from timApp.modules.chattim.indexer import (
-    Indexer,
-    GeminiEmbeddingModelREST,
-    OpenAiEmbedREST,
-)
-from timApp.modules.chattim.model import GeminiModelREST, OpenAiREST
 from timApp.tim_app import csrf
 from timApp.util.flask.responsehelper import json_response
 from tim_common.markupmodels import GenericMarkupModel
@@ -86,24 +78,14 @@ chattim = create_nontask_blueprint(
 
 @chattim.post("/ask")
 def define_ask_route():
+    web: PluginAnswerWeb = {"result": "hello from server"}
+    result: PluginAnswerResp = {"web": web}
+
     # TODO: pitäisi varmaan muuttaa jotenkin tyyliin: define_ask_route(input: SomeDataClass) jne
     data = request.get_json()
     user_input = data.get("input")
     user_id = data.get("user_id")
     document_id = data.get("document_id")
-
-    OPENAI_API_KEY = ""
-    # embedding_model = OpenAiEmbedREST(api_key=OPENAI_API_KEY)
-
-    # indexer = Indexer(embedding_model=embedding_model)
-
-    openaichatmodel = OpenAiREST(api_key=OPENAI_API_KEY)
-    # indexer.create_embeddings()
-    # context = indexer.get_context(user_input)
-    # response = openaichatmodel.generate(context=context, prompt=user_input)
-    response = openaichatmodel.generate(prompt=user_input)
-    web: PluginAnswerWeb = {"result": f"{response}"}
-    result: PluginAnswerResp = {"web": web}
 
     # TODO: kytke plugincoreen
 
