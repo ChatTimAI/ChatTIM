@@ -3,8 +3,8 @@ from typing import Protocol
 from bs4 import BeautifulSoup
 import json
 import requests
-
-# from openai import OpenAI
+from timApp.document import docentry
+from openai import OpenAI
 import numpy as np
 
 
@@ -147,8 +147,11 @@ class OpenAiEmbeddingModel(EmbeddingModel):
 
     def generate(self, chunks: TextChunks):
         """generates embeddings from provided chunks"""
-        text = chunks.chunks
-
+        try:
+            text = chunks.chunks
+        except Exception as e:
+            print(f"error extracting text from chunks {e}")
+            return f"error extracting text from chunks {e,chunks}"
         try:
             result = self.client.embeddings.create(
                 input=text, model="text-embedding-3-small"
@@ -222,6 +225,7 @@ class Indexer:
         # self.text_chunker = text_chunker
         self.data = []
 
+# tätä ei ehkä tarvita enään
     def chunk_text(self, text, max_chunk_size: int = 600, overlap: int = 100):
         chunks = []
         sentences = text.split(". ")
@@ -238,19 +242,26 @@ class Indexer:
             chunks.append(current_chunk)
         return TextChunks(chunks=chunks[0:20])
 
-    def get_page(self, doc_id=None):
-        with open("modules/chattim/testidata.txt", "r") as file:
-            page = file.read()
-        return page
+    def get_tim_blocks(self, doc_id) ->TextChunks:
+        try:
+            doc = docentry.DocEntry.find_by_id(doc_id)
+        except Exception as e:
+            print(f"Error getting document {e}")
+            return f"Error getting document {e}"
 
-    def create_embeddings(self):
+        blocks = doc.document.export_raw_data()
+        text = [block["md"] for block in blocks]
+
+        return TextChunks(chunks=text)
+
+    def create_embeddings(self,file_name:str):
         """generates the data object containing embeddings and corresponding text chunks"""
 
-        text = self.get_page()
-        chunks = self.chunk_text(text)
+        chunks = self.get_tim_blocks(doc_id=39)
+
 
         embeddings = self.embedding_model.generate(chunks)
-
+        #print(chunks)
         ids = list(range(len(chunks.chunks)))
 
         self.data = [
@@ -260,23 +271,24 @@ class Indexer:
         data_dict = [asdict(obj) for obj in self.data]
 
         try:
-            with open("modules/chattim/embeddings2.json", "w") as f:
+            with open(f"modules/chattim/{file_name}", "w") as f:
                 json.dump(data_dict, f, indent=2)
         except Exception as e:
             print(f"Error saving embeddings {e}")
             return f"Error saving embeddings {e}"
         return self.data
 
-    def get_embeddings(self):
+    def get_embeddings(self,file_name):
+
         try:
-            with open("modules/chattim/embeddings2.json", "r") as file:
+            with open(f"modules/chattim/{file_name}", "r") as file:
                 page_embeddings = json.load(file)
         except Exception as e:
             print(f"Error retrieving embeddings {e}")
             return f"Error retrieving embeddings {e}"
         return page_embeddings
 
-    def get_context(self, prompt: str, k: int = 5, doc_id: int = None):
+    def get_context(self, prompt: str,file_name:str, k: int ):
         prompt = TextChunks(chunks=[prompt])
         try:
             prompt_embedding = self.embedding_model.generate(prompt)
@@ -284,9 +296,9 @@ class Indexer:
         except Exception as e:
 
             return f"Prompt embedding error: {e}"
-        page_embeddings = self.get_embeddings()
+        page_embeddings = self.get_embeddings(file_name)
 
-        embeddings = []
+        embeddings:list[float] = []
         texts = []
         for chunk in page_embeddings:
             embeddings.append(chunk["embedding"])
