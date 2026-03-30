@@ -6,7 +6,7 @@ import requests
 from timApp.document import docentry
 from openai import OpenAI
 import numpy as np
-
+from timApp.modules.chattim.database_handler import TimDatabase
 
 # TODO mallien määrittely/valinta Indexer luokkaan?
 @dataclass
@@ -244,12 +244,12 @@ class Indexer:
 
     def get_tim_blocks(self, doc_id) ->TextChunks:
         try:
-            doc = docentry.DocEntry.find_by_id(doc_id)
+            doc = TimDatabase.get_tim_document_by_id(doc_id)
         except Exception as e:
             print(f"Error getting document {e}")
             return f"Error getting document {e}"
 
-        blocks = doc.document.export_raw_data()
+        blocks = doc.export_raw_data()
         text = [block["md"] for block in blocks]
 
         return TextChunks(chunks=text)
