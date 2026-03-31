@@ -98,60 +98,6 @@ class OpenAiEmbeddingModel(EmbeddingModel):
         return EmbeddingResponse(embeddings=embeddings)
 
 
-class GeminiEmbeddingModelREST(EmbeddingModel):
-    """gemini implementation of embedding model"""
-
-    def __init__(self, api_key: str):
-
-        self.api_key = api_key
-        self.url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-embedding-001:batchEmbedContents"
-
-    # TODO task tyypin valinta? jos tätä halutaan käyttää
-    def generate(self, chunks: TextChunks) -> EmbeddingResponse:
-        """generates embeddings from provided chunks"""
-        texts = chunks.chunks
-        headers = {"Content-Type": "application/json", "x-goog-api-key": self.api_key}
-        data = {
-            "requests": [
-                {
-                    "model": "models/gemini-embedding-001",
-                    "content": {"parts": [{"text": text}]},
-                }
-                for text in texts
-            ]
-        }
-        try:
-            response = requests.post(self.url, headers=headers, json=data)
-
-        except Exception as e:
-            print(f"Error generating embeddings {e}")
-            return f"Error generating embeddings {e}"
-
-        embeddings = [x["values"] for x in response.json()["embeddings"]]
-
-        return EmbeddingResponse(embeddings=embeddings)
-
-
-class OpenAiEmbedREST(EmbeddingModel):
-    def __init__(self, api_key: str):
-
-        self.api_key = api_key
-        self.url = "https://api.openai.com/v1/embeddings"
-
-    def generate(self, chunks):
-        headers = {
-            "Authorization": f"Bearer {self.api_key}",
-            "Content-Type": "application/json",
-        }
-        texts = chunks.chunks
-        data = {"input": texts, "model": "text-embedding-3-small"}
-        response = requests.post(self.url, headers=headers, json=data)
-        response = response.json()
-
-        embeddings = [x["embedding"] for x in response["data"]]
-        return EmbeddingResponse(embeddings=embeddings)
-
-
 # TODO tekstin paloitteluun eri vaihtoehtoja
 class Indexer:
     def __init__(self, embedding_model: EmbeddingModel):
