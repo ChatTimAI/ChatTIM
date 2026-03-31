@@ -14,7 +14,7 @@ import type {
     OnInit,
 } from "@angular/core";
 import {Component, NgModule, ElementRef} from "@angular/core";
-import {HttpClient, HttpClientModule} from "@angular/common/http";
+import {HttpClient, HttpClientModule, HttpEvent} from "@angular/common/http";
 import {FormsModule} from "@angular/forms";
 import {TimUtilityModule} from "tim/ui/tim-utility.module";
 import {AngularPluginBase} from "tim/plugin/angular-plugin-base.directive";
@@ -45,6 +45,17 @@ const PluginFields = t.intersection([
 export interface ChatEntry {
     user: string;
     agent: string;
+}
+
+export interface AskResponse {
+    data?: string;
+    usage?: number;
+}
+
+export interface AskParams {
+    input: string;
+    user_id: string;
+    document_id: number;
 }
 
 // Huom: <tim-dialog-frame ei sisällä markupError attribuuttia
@@ -109,6 +120,7 @@ export class ChatTIMComponent
     selectedModel = "gpt-4o";
     temperature = 0.7;
     maxTokens = 1000;
+    useStreaming: boolean = false;
 
     conversation: ChatEntry[] = [];
 
@@ -176,16 +188,21 @@ export class ChatTIMComponent
         const input: string = this.userinput;
         const user_id: string = String(Users.getCurrent().id);
         const document_id: number = this.document_id;
+        const body: AskParams = {input, user_id, document_id};
 
+        if (this.useStreaming) {
+            await this.askPostStream(body);
+        } else {
+            await this.askPost(body);
+        }
+        this.isRunning = false;
+    }
+
+    async askPost(body: any) {
         const response = await this.httpPost<{
             web: {result: string; error?: string};
-        }>("/chattim/ask", {
-            input,
-            user_id,
-            document_id,
-        });
+        }>("/chattim/ask", body);
 
-        this.isRunning = false;
         if (response.ok) {
             const data = response.result;
             this.error = data.web.error;
@@ -197,6 +214,20 @@ export class ChatTIMComponent
         } else {
             this.error = response.result.error.error;
         }
+    }
+
+    async askPostStream(body: AskParams) {
+        const observable = this.http.post("/chattim/askStream", body, {
+            observe: "events",
+            responseType: "text",
+            reportProgress: true,
+        });
+        // TODO: handle events
+        observable.subscribe({
+            next: (value: HttpEvent<string>) => {},
+            error: (error) => console.error(error),
+            complete: () => console.log("Answer completed"),
+        });
     }
 }
 
