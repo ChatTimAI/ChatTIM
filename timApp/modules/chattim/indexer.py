@@ -1,6 +1,5 @@
 from dataclasses import dataclass, asdict
 from typing import Protocol
-from bs4 import BeautifulSoup
 import json
 import requests
 from timApp.document import docentry
@@ -35,69 +34,6 @@ class EmbeddingData:
     text: str
     id: int
     # filename: str
-
-
-class TextChunkerHTML:
-    def __init__(self, text: str):
-        self.text = text
-
-    def split_sentence(self) -> TextChunks:
-        soup = BeautifulSoup(self.text, "html.parser")
-        self.text = soup.get_text(strip=True)
-        # needs better sentence splitting
-        chunks = TextChunks(chunks=self.text.split(". "))
-        return chunks
-
-    def split_paragraph(self) -> TextChunks:
-        soup = BeautifulSoup(self.text, "html.parser")
-        paragraphs = soup.find_all("p")
-
-        paragraphs_text = []
-        for p in paragraphs:
-            text = p.get_text()
-            paragraphs_text.append(text)
-        # vain ensimmäiset 20 kappaletta ilmaisen avaimen takia
-        paragraphs = TextChunks(chunks=paragraphs_text[0:20])
-        return paragraphs
-
-
-class TextChunker:
-
-    def __init__(self, text: str):
-        self.text = text
-
-    def split_sentence(self) -> TextChunks:
-        # needs better sentence splitting
-        return TextChunks(chunks=self.text.split(". "))
-
-    # splits every 600 characters, includes 100 from last chunk
-    def split(self, chunk_size: int = 600, overlap: int = 100):
-
-        chunks = []
-        start = 0
-        while start < len(self.text):
-            end = start + chunk_size
-            chunks.append(self.text[start:end])
-            start += chunk_size - overlap
-        return TextChunks(chunks=chunks)
-
-    # splits the chunks at end of sentence and adds some overlap between chunks
-    def split2(self, max_chunk_size: int = 600, overlap: int = 100):
-        chunks = []
-        sentences = self.text.split(". ")
-        current_chunk = ""
-
-        for sentence in sentences:
-            if (len(current_chunk) + len(sentence)) < max_chunk_size:
-                current_chunk += sentence + ". "
-            else:
-                chunks.append(current_chunk)
-                overlapping_text = current_chunk[-overlap:]
-                current_chunk = overlapping_text + ". " + sentence
-        if (len(current_chunk)) > 0:
-            chunks.append(current_chunk)
-        return TextChunks(chunks=chunks[0:20])
-
 
 # TODO mallin valinta,
 #  mahdollisesti mallikohtaisia asetuksia?(task type,vektorin koko jne)
@@ -147,11 +83,9 @@ class OpenAiEmbeddingModel(EmbeddingModel):
 
     def generate(self, chunks: TextChunks):
         """generates embeddings from provided chunks"""
-        try:
-            text = chunks.chunks
-        except Exception as e:
-            print(f"error extracting text from chunks {e}")
-            return f"error extracting text from chunks {e,chunks}"
+
+        text = chunks.chunks
+
         try:
             result = self.client.embeddings.create(
                 input=text, model="text-embedding-3-small"
@@ -241,7 +175,7 @@ class Indexer:
         if (len(current_chunk)) > 0:
             chunks.append(current_chunk)
         return TextChunks(chunks=chunks[0:20])
-
+# TODO ei haeta mahdollisia plugin lohkoja
     def get_tim_blocks(self, doc_id) ->TextChunks:
         try:
             doc = TimDatabase.get_tim_document_by_id(doc_id)
