@@ -1,5 +1,4 @@
 import os
-import json
 from dataclasses import dataclass
 from typing import Any, TypedDict
 from flask import Response, stream_with_context
@@ -7,7 +6,7 @@ from webargs.flaskparser import use_args
 from tim_common.marshmallow_dataclass import class_schema
 
 from timApp.tim_app import csrf
-from timApp.util.flask.responsehelper import json_response
+from timApp.util.flask.responsehelper import json_response, to_json_str
 from tim_common.markupmodels import GenericMarkupModel
 from tim_common.pluginserver_flask import (
     GenericHtmlModel,
@@ -32,6 +31,7 @@ ChatTimStateModel = dict[str, Any]
 class ChatTimAskResponse(TypedDict, total=False):
     answer: str | None
     usage: int | None
+    error: str | None
 
 
 @dataclass
@@ -95,16 +95,18 @@ chattim = create_nontask_blueprint(
 @chattim.post("/ask")
 @use_args(class_schema(ChatTimAskParams)(), locations=("json",))
 def define_ask_route(params: ChatTimAskParams):
-    web: PluginAnswerWeb = {"result": "hello from server"}
-    result: PluginAnswerResp = {"web": web}
-
     user_input = params.input
     user_id = params.user_id
     document_id = params.document_id
 
+    response = ChatTimAskResponse(
+        answer="hello from server",
+        usage=0,
+    )
+
     # TODO: kytke plugincoreen
 
-    return json_response(result)
+    return json_response(response)
 
 
 from .model import ModelRegistry, SUPPORTED_MODELS, ModelSpec, Message, GenerateOptions
@@ -131,16 +133,22 @@ def define_ask_stream_route(params: ChatTimAskParams):
             [Message(role="user", content=user_input)], GenerateOptions()
         )
         for msg in stream:
-            print(msg)
             if msg.delta:
-                yield json.dumps(ChatTimAskResponse(answer=msg.delta)) + "\n"
+                yield to_ndjson_str(ChatTimAskResponse(answer=msg.delta))
             if msg.usage:
-                yield json.dumps(
-                    ChatTimAskResponse(usage=msg.usage.total_tokens)
-                ) + "\n"
+                yield to_ndjson_str(ChatTimAskResponse(usage=msg.usage.total_tokens))
 
     return Response(
         stream_with_context(generate()),
         mimetype="application/x-ndjson",
-        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+        headers={"X-Accel-Buffering": "no"},
     )
+
+
+def to_ndjson_str(json_data: Any) -> str:
+    """Return a newline delimited JSON string.
+
+    :param json_data: The data to be converted.
+    :return: A string representation of the JSON data ending in a newline.
+    """
+    return to_json_str(json_data) + "\n"
