@@ -2,7 +2,9 @@ import os
 import json
 from dataclasses import dataclass
 from typing import Any, TypedDict
-from flask import request, Response, stream_with_context
+from flask import Response, stream_with_context
+from webargs.flaskparser import use_args
+from tim_common.marshmallow_dataclass import class_schema
 
 from timApp.tim_app import csrf
 from timApp.util.flask.responsehelper import json_response
@@ -25,6 +27,18 @@ class ChatTimMarkupModel(GenericMarkupModel):
 # TODO: make proper dataclasses
 ChatTimInputModel = dict[str, Any]
 ChatTimStateModel = dict[str, Any]
+
+
+class ChatTimAskResponse(TypedDict, total=False):
+    answer: str | None
+    usage: int | None
+
+
+@dataclass
+class ChatTimAskParams:
+    input: str
+    user_id: str
+    document_id: int
 
 
 @dataclass
@@ -79,24 +93,18 @@ chattim = create_nontask_blueprint(
 
 
 @chattim.post("/ask")
-def define_ask_route():
+@use_args(class_schema(ChatTimAskParams)(), locations=("json",))
+def define_ask_route(params: ChatTimAskParams):
     web: PluginAnswerWeb = {"result": "hello from server"}
     result: PluginAnswerResp = {"web": web}
 
-    # TODO: pitäisi varmaan muuttaa jotenkin tyyliin: define_ask_route(input: SomeDataClass) jne
-    data = request.get_json()
-    user_input = data.get("input")
-    user_id = data.get("user_id")
-    document_id = data.get("document_id")
+    user_input = params.input
+    user_id = params.user_id
+    document_id = params.document_id
 
     # TODO: kytke plugincoreen
 
     return json_response(result)
-
-
-class ChatTimAskResponse(TypedDict):
-    data: str | None
-    usage: int | None
 
 
 from .model import ModelRegistry, SUPPORTED_MODELS, ModelSpec, Message, GenerateOptions
@@ -113,11 +121,9 @@ model = reg.create(
 
 
 @chattim.post("/askStream")
-def define_ask_stream_route():
-    data = request.get_json()
-    user_input = data.get("input")
-    user_id = data.get("user_id")
-    document_id = data.get("document_id")
+@use_args(class_schema(ChatTimAskParams)(), locations=("json",))
+def define_ask_stream_route(params: ChatTimAskParams):
+    user_input = params.input
 
     def generate():
         # TODO: temporary, use the plugincore
@@ -127,10 +133,10 @@ def define_ask_stream_route():
         for msg in stream:
             print(msg)
             if msg.delta:
-                yield json.dumps(ChatTimAskResponse(data=msg.delta, usage=None)) + "\n"
+                yield json.dumps(ChatTimAskResponse(answer=msg.delta)) + "\n"
             if msg.usage:
                 yield json.dumps(
-                    ChatTimAskResponse(data=None, usage=msg.usage.total_tokens)
+                    ChatTimAskResponse(usage=msg.usage.total_tokens)
                 ) + "\n"
 
     return Response(
