@@ -4,6 +4,8 @@ import json
 from openai import OpenAI
 import numpy as np
 from timApp.modules.chattim.database_handler import TimDatabase
+from urllib.request import urlopen
+from bs4 import BeautifulSoup
 
 # TODO mallien määrittely/valinta Indexer luokkaan?
 @dataclass
@@ -120,22 +122,43 @@ class Indexer:
             chunks.append(current_chunk)
         return TextChunks(chunks=chunks)
 # TODO ei haeta mahdollisia plugin lohkoja
-    def get_tim_blocks(self, doc_id) ->TextChunks:
-        try:
-            doc = TimDatabase.get_tim_document_by_id(doc_id)
-        except Exception as e:
-            print(f"Error getting document {e}")
-            return f"Error getting document {e}"
+    def get_chunks(self, doc_id,source: str ="tim") ->TextChunks:
+        if source=="tim":
+            try:
+                doc = TimDatabase.get_tim_document_by_id(doc_id)
+            except Exception as e:
+                print(f"Error getting document {e}")
+                return f"Error getting document {e}"
 
-        blocks = doc.export_raw_data()
-        text = [block["md"] for block in blocks]
+            blocks = doc.export_raw_data()
+            text = [block["md"] for block in blocks]
+            return TextChunks(chunks=text)
+        else:
+            try:
+                with urlopen(doc_id) as response:
+                    page = response.read().decode('utf-8')
+                soup = BeautifulSoup(page)
+                paragraphs=soup.find_all("p")
+                paragraphs_text = []
 
-        return TextChunks(chunks=text)
+                for p in paragraphs:
 
-    def create_embeddings(self,file_name:str,doc_id:int):
-        """generates the data object containing embeddings and corresponding text chunks"""
+                    text = p.get_text()
+                    if(len(text) > 0):
+                        paragraphs_text.append(text)
+                paragraphs = TextChunks(chunks=paragraphs_text)
 
-        chunks = self.get_tim_blocks(doc_id=doc_id)
+                return paragraphs
+            except Exception as e:
+                print(f"Error getting webpage {e}")
+                return f"Error getting webpage {e}"
+
+
+
+    def create_embeddings(self,file_name:str,doc_id,source: str ="tim"):
+        """generates embeddings for tim page"""
+
+        chunks = self.get_chunks(doc_id=doc_id,source=source)
 
 
         embeddings = self.embedding_model.generate(chunks)
@@ -155,6 +178,7 @@ class Indexer:
             print(f"Error saving embeddings {e}")
             return f"Error saving embeddings {e}"
         return self.data
+
 
     def get_embeddings(self,file_name):
 
