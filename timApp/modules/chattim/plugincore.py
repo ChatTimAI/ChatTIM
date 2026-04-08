@@ -1,8 +1,13 @@
 import os
 import time
 import uuid
+import json
 from dataclasses import dataclass
+from pathlib import Path
+from urllib.error import URLError, HTTPError
+from urllib.request import Request, urlopen
 
+from timApp.util.utils import cache_folder_path
 from timApp.timdb.dbaccess import get_files_path
 from timApp.auth.get_user_rights_for_item import UserItemRights
 from timApp.item.item import Item
@@ -17,9 +22,9 @@ from timApp.modules.chattim.rag import (
     sum_chunks,
     ModelInfo,
 )
-from typing import Generic, TypeVar, TypedDict
+from typing import Generic, TypeVar, TypedDict, Any
 
-from timApp.modules.chattim.model import ModelResponseChunk, Usage
+from timApp.modules.chattim.model import ModelResponseChunk, Usage, Provider
 from timApp.modules.chattim.conversation import ConversationManager, ChatMessage
 
 T = TypeVar("T")
@@ -359,3 +364,102 @@ class PluginCore:
         except ValueError:
             print(f"Invalid rag mode given: {mode}")
             return None
+
+    # TODO: maybe move the model metadata handling and cost calculation
+    # somewhere else
+    @staticmethod
+    def refresh_models_metadata() -> None:
+        """Refresh cached model metadata."""
+        url = "https://models.dev/api.json"
+        cache_path = PluginCore._models_stat_path()
+        cache_path.parent.mkdir(parents=True, exist_ok=True)
+
+        req = Request(url, headers={"User-Agent": "ChatTIM/1.0"})
+        with urlopen(req, timeout=30) as resp:
+            body = resp.read()
+
+        # Save to disk
+        data = json.loads(body.decode("utf-8"))
+        tmp_path = cache_path.with_suffix(cache_path.suffix + ".tmp")
+        tmp_path.write_text(json.dumps(data), encoding="utf-8")
+        os.replace(tmp_path, cache_path)
+
+    @staticmethod
+    def fetch_model_metadata(
+        provider: Provider, model_id: str
+    ) -> dict[str, Any] | None:
+        """Fetch model metadata from cached JSON.
+
+        :param provider: The model provider.
+        :param model_id: The model ID.
+        :return: Metadata of the model in a dict or None if not found.
+        """
+        cache_path = PluginCore._models_stat_path()
+        ttl_s = 86400  # Default 1 day
+
+        def is_stale(p: Path) -> bool:
+            try:
+                age_s = time.time() - p.stat().st_mtime
+                return age_s > ttl_s
+            except FileNotFoundError:
+                return True
+
+        # Check if we need to refresh the data
+        if is_stale(cache_path):
+            try:
+                PluginCore.refresh_models_metadata()
+            except (URLError, HTTPError, TimeoutError, json.JSONDecodeError):
+                # If refresh fails, fall back to existing cache if present.
+                pass
+
+        try:
+            raw = cache_path.read_text(encoding="utf-8")
+            data: dict = json.loads(raw)
+        except FileNotFoundError:
+            return None
+        except json.JSONDecodeError:
+            return None
+
+        prov = data.get(provider)
+        if not isinstance(prov, dict):
+            return None
+        models = prov.get("models")
+        if not isinstance(models, dict):
+            return None
+        model = models.get(model_id)
+        return model if isinstance(model, dict) else None
+
+    @staticmethod
+    def calculate_model_cost(
+        provider: Provider, model_id: str, usage: Usage
+    ) -> float | None:
+        """Calculate approximate model cost in USD.
+
+        :param provider: The model provider.
+        :param model_id: The model ID.
+        :param usage: Token usage to calculate the cost from.
+        :return: Cost of the model usage in USD.
+        """
+        meta = PluginCore.fetch_model_metadata(provider, model_id)
+        if not meta:
+            return None
+
+        cost = meta.get("cost")
+        if not isinstance(cost, dict):
+            return None
+
+        usd_per_token = 1_000_000.0
+        try:
+            usd_per_1m_in = float(cost["input"])
+            usd_per_1m_out = float(cost["output"])
+        except (KeyError, TypeError, ValueError):
+            return None
+
+        input_usd = (usage.prompt_tokens / usd_per_token) * usd_per_1m_in
+        output_usd = (usage.completion_tokens / usd_per_token) * usd_per_1m_out
+        return input_usd + output_usd
+
+    @staticmethod
+    def _models_stat_path() -> Path:
+        """Path to the models metadata JSON file."""
+        return cache_folder_path / "chattim" / "models_metadata.json"
