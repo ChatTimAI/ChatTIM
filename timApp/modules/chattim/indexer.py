@@ -69,11 +69,11 @@ class GeminiEmbeddingModel(EmbeddingModel):
             # result = self.client.models.embed_content(model="gemini-embedding-001",contents=text,)
         except Exception as e:
             print(f"Error generating embeddings {e}")
-            return f"Error generating embeddings {e}"
+            return EmbeddingResponse(embeddings=[],used_tokens=0)
 
         embeddings = [x.embedding for x in result.data]
 
-        return EmbeddingResponse(embeddings=embeddings)
+        return EmbeddingResponse(embeddings=embeddings,used_tokens = result.usage.total_tokens)
 
 
 class OpenAiEmbeddingModel(EmbeddingModel):
@@ -83,7 +83,7 @@ class OpenAiEmbeddingModel(EmbeddingModel):
         self.api_key = api_key
         self.client = OpenAI(api_key=self.api_key)
 
-    def generate(self, chunks: TextChunks):
+    def generate(self, chunks: TextChunks)->EmbeddingResponse:
         """generates embeddings from provided chunks"""
 
         text = chunks.chunks
@@ -95,7 +95,7 @@ class OpenAiEmbeddingModel(EmbeddingModel):
 
         except Exception as r:
             print("Error generating embeddings", r)
-            return EmbeddingResponse(embeddings=[])
+            return EmbeddingResponse(embeddings=[],used_tokens=0)
 
         embeddings = [x.embedding for x in result.data]
 
@@ -107,7 +107,7 @@ class Indexer:
     def __init__(self, embedding_model: EmbeddingModel):
         self.embedding_model = embedding_model
         # self.text_chunker = text_chunker
-        self.data = []
+
 
     # tätä ei ehkä tarvita enään
     def chunk_text(self, text, max_chunk_size: int = 600, overlap: int = 100):
@@ -133,7 +133,8 @@ class Indexer:
             text = [block["md"] for block in blocks]
         except Exception as e:
             print(f"Error getting tim blocks {e}")
-            return f"Error getting tim blocks {e}"
+
+
         return TextChunks(chunks=text)
 
     def create_embeddings(self,documents:list[Document])->int:
@@ -147,11 +148,11 @@ class Indexer:
             tokens_used += embeddings.used_tokens
             ids = list(range(len(chunks.chunks)))
 
-            self.data = [
+            data = [
                 EmbeddingData(embedding=embedding, text=text, id=i)
                 for (embedding, text, i) in zip(embeddings.embeddings, chunks.chunks, ids)
             ]
-            data_dict = [asdict(obj) for obj in self.data]
+            data_dict = [asdict(obj) for obj in data]
             file_name = document.doc_id
             try:
                 with open(f"modules/chattim/{file_name}.json", "w") as f:
@@ -168,6 +169,7 @@ class Indexer:
                 page_embeddings = json.load(file)
         except Exception as e:
             print(f"Error retrieving embeddings {e}")
+
 
         return page_embeddings
 
