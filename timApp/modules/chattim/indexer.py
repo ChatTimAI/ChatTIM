@@ -21,7 +21,8 @@ class EmbeddingResponse:
     """list containing embeddings returned from the model"""
 
     embeddings: list[list[float]]
-    used_tokens:int
+    used_tokens: int
+
 
 @dataclass
 class EmbeddingData:
@@ -69,11 +70,13 @@ class GeminiEmbeddingModel(EmbeddingModel):
             # result = self.client.models.embed_content(model="gemini-embedding-001",contents=text,)
         except Exception as e:
             print(f"Error generating embeddings {e}")
-            return EmbeddingResponse(embeddings=[],used_tokens=0)
+            return EmbeddingResponse(embeddings=[], used_tokens=0)
 
         embeddings = [x.embedding for x in result.data]
 
-        return EmbeddingResponse(embeddings=embeddings,used_tokens = result.usage.total_tokens)
+        return EmbeddingResponse(
+            embeddings=embeddings, used_tokens=result.usage.total_tokens
+        )
 
 
 class OpenAiEmbeddingModel(EmbeddingModel):
@@ -83,7 +86,7 @@ class OpenAiEmbeddingModel(EmbeddingModel):
         self.api_key = api_key
         self.client = OpenAI(api_key=self.api_key)
 
-    def generate(self, chunks: TextChunks)->EmbeddingResponse:
+    def generate(self, chunks: TextChunks) -> EmbeddingResponse:
         """generates embeddings from provided chunks"""
 
         text = chunks.chunks
@@ -95,11 +98,13 @@ class OpenAiEmbeddingModel(EmbeddingModel):
 
         except Exception as r:
             print("Error generating embeddings", r)
-            return EmbeddingResponse(embeddings=[],used_tokens=0)
+            return EmbeddingResponse(embeddings=[], used_tokens=0)
 
         embeddings = [x.embedding for x in result.data]
 
-        return EmbeddingResponse(embeddings=embeddings,used_tokens = result.usage.total_tokens)
+        return EmbeddingResponse(
+            embeddings=embeddings, used_tokens=result.usage.total_tokens
+        )
 
 
 # TODO tekstin paloitteluun eri vaihtoehtoja
@@ -107,7 +112,6 @@ class Indexer:
     def __init__(self, embedding_model: EmbeddingModel):
         self.embedding_model = embedding_model
         # self.text_chunker = text_chunker
-
 
     # tätä ei ehkä tarvita enään
     def chunk_text(self, text, max_chunk_size: int = 600, overlap: int = 100):
@@ -127,21 +131,19 @@ class Indexer:
         return TextChunks(chunks=chunks)
 
     # TODO ei haeta mahdollisia plugin lohkoja
-    def get_tim_blocks(self, doc:Document) -> TextChunks:
+    def get_tim_blocks(self, doc: Document) -> TextChunks:
         try:
             blocks = doc.export_raw_data()
             text = [block["md"] for block in blocks]
         except Exception as e:
             print(f"Error getting tim blocks {e}")
 
-
         return TextChunks(chunks=text)
 
-    def create_embeddings(self,documents:list[Document])->int:
+    def create_embeddings(self, documents: list[Document]) -> int:
         """generates the data object containing embeddings and corresponding text chunks,returns the number of tokens used"""
         tokens_used = 0
         for document in documents:
-
             chunks = self.get_tim_blocks(doc=document)
 
             embeddings = self.embedding_model.generate(chunks)
@@ -150,7 +152,9 @@ class Indexer:
 
             data = [
                 EmbeddingData(embedding=embedding, text=text, id=i)
-                for (embedding, text, i) in zip(embeddings.embeddings, chunks.chunks, ids)
+                for (embedding, text, i) in zip(
+                    embeddings.embeddings, chunks.chunks, ids
+                )
             ]
             data_dict = [asdict(obj) for obj in data]
             file_name = document.doc_id
@@ -160,7 +164,6 @@ class Indexer:
             except Exception as e:
                 print(f"Error saving embeddings {e}")
 
-
         return tokens_used
 
     def get_embeddings(self, doc_id: str):
@@ -169,7 +172,6 @@ class Indexer:
                 page_embeddings = json.load(file)
         except Exception as e:
             print(f"Error retrieving embeddings {e}")
-
 
         return page_embeddings
 
@@ -208,4 +210,4 @@ class Indexer:
 
         [context.append(text) for text, similarity in best_chunks]
 
-        return context,tokens_used
+        return context, tokens_used
