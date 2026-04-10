@@ -172,10 +172,14 @@ class Indexer:
         return page_embeddings
 
     def get_context(self, prompt: str, file_name: str, k: int):
+        """returns the context for the prompt as list of text,and the number of tokens used,"""
         prompt = TextChunks(chunks=[prompt])
+        tokens_used = 0
         try:
             prompt_embedding = self.embedding_model.generate(prompt)
+            tokens_used = prompt_embedding.used_tokens
             prompt_embedding = np.array(prompt_embedding.embeddings[0])
+
         except Exception as e:
             return f"Prompt embedding error: {e}"
         page_embeddings = self.get_embeddings(file_name)
@@ -202,4 +206,4 @@ class Indexer:
 
         [context.append(text) for text, similarity in best_chunks]
 
-        return context
+        return context,tokens_used
