@@ -3,6 +3,8 @@ from typing import Protocol
 import json
 from openai import OpenAI
 import numpy as np
+
+from timApp.document.document import Document
 from timApp.modules.chattim.database_handler import TimDatabase
 
 
@@ -19,7 +21,7 @@ class EmbeddingResponse:
     """list containing embeddings returned from the model"""
 
     embeddings: list[list[float]]
-
+    used_tokens:int
 
 @dataclass
 class EmbeddingData:
@@ -90,12 +92,14 @@ class OpenAiEmbeddingModel(EmbeddingModel):
             result = self.client.embeddings.create(
                 input=text, model="text-embedding-3-small"
             )
+
         except Exception as r:
             print("Error generating embeddings", r)
             return EmbeddingResponse(embeddings=[])
 
         embeddings = [x.embedding for x in result.data]
-        return EmbeddingResponse(embeddings=embeddings)
+
+        return EmbeddingResponse(embeddings=embeddings,used_tokens = result.usage.total_tokens)
 
 
 # TODO tekstin paloitteluun eri vaihtoehtoja
@@ -123,49 +127,48 @@ class Indexer:
         return TextChunks(chunks=chunks)
 
     # TODO ei haeta mahdollisia plugin lohkoja
-    def get_tim_blocks(self, doc_id) -> TextChunks:
+    def get_tim_blocks(self, doc:Document) -> TextChunks:
         try:
-            doc = TimDatabase.get_tim_document_by_id(doc_id)
+            blocks = doc.export_raw_data()
+            text = [block["md"] for block in blocks]
         except Exception as e:
-            print(f"Error getting document {e}")
-            return f"Error getting document {e}"
-
-        blocks = doc.export_raw_data()
-        text = [block["md"] for block in blocks]
-
+            print(f"Error getting tim blocks {e}")
+            return f"Error getting tim blocks {e}"
         return TextChunks(chunks=text)
 
-    def create_embeddings(self, file_name: str, doc_id: int):
-        """generates the data object containing embeddings and corresponding text chunks"""
+    def create_embeddings(self,documents:list[Document])->int:
+        """generates the data object containing embeddings and corresponding text chunks,returns the number of tokens used"""
+        tokens_used = 0
+        for document in documents:
 
-        chunks = self.get_tim_blocks(doc_id=doc_id)
+            chunks = self.get_tim_blocks(doc=document)
 
-        embeddings = self.embedding_model.generate(chunks)
-        # print(chunks)
-        ids = list(range(len(chunks.chunks)))
+            embeddings = self.embedding_model.generate(chunks)
+            tokens_used += embeddings.used_tokens
+            ids = list(range(len(chunks.chunks)))
 
-        self.data = [
-            EmbeddingData(embedding=embedding, text=text, id=i)
-            for (embedding, text, i) in zip(embeddings.embeddings, chunks.chunks, ids)
-        ]
-        data_dict = [asdict(obj) for obj in self.data]
+            self.data = [
+                EmbeddingData(embedding=embedding, text=text, id=i)
+                for (embedding, text, i) in zip(embeddings.embeddings, chunks.chunks, ids)
+            ]
+            data_dict = [asdict(obj) for obj in self.data]
+            file_name = document.doc_id
+            try:
+                with open(f"modules/chattim/{file_name}.json", "w") as f:
+                    json.dump(data_dict, f, indent=2)
+            except Exception as e:
+                print(f"Error saving embeddings {e}")
 
+
+        return tokens_used
+
+    def get_embeddings(self, doc_id: str):
         try:
-            with open(f"modules/chattim/{file_name}", "w") as f:
-                json.dump(data_dict, f, indent=2)
-        except Exception as e:
-            print(f"Error saving embeddings {e}")
-            return f"Error saving embeddings {e}"
-
-        return self.data
-
-    def get_embeddings(self, file_name):
-        try:
-            with open(f"modules/chattim/{file_name}", "r") as file:
+            with open(f"modules/chattim/{doc_id}.json", "r") as file:
                 page_embeddings = json.load(file)
         except Exception as e:
             print(f"Error retrieving embeddings {e}")
-            return f"Error retrieving embeddings {e}"
+
         return page_embeddings
 
     def get_context(self, prompt: str, file_name: str, k: int):
