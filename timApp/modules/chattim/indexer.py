@@ -25,6 +25,14 @@ class EmbeddingResponse:
 
 
 @dataclass
+class ContextResponse:
+    """list containing context returned from the model"""
+
+    context: str
+    tokens_used: int
+
+
+@dataclass
 class EmbeddingData:
     """embedding and
     corresponding text chunk.
@@ -109,8 +117,9 @@ class OpenAiEmbeddingModel(EmbeddingModel):
 
 # TODO tekstin paloitteluun eri vaihtoehtoja
 class Indexer:
-    def __init__(self, embedding_model: EmbeddingModel):
+    def __init__(self, embedding_model: EmbeddingModel, indexed_page_ids):
         self.embedding_model = embedding_model
+        self.indexed_page_ids = indexed_page_ids
         # self.text_chunker = text_chunker
 
     # tätä ei ehkä tarvita enään
@@ -166,16 +175,21 @@ class Indexer:
 
         return tokens_used
 
-    def get_embeddings(self, doc_id: str):
-        try:
-            with open(f"modules/chattim/{doc_id}.json", "r") as file:
-                page_embeddings = json.load(file)
-        except Exception as e:
-            print(f"Error retrieving embeddings {e}")
+    def get_embeddings(
+        self,
+    ):
+        page_embeddings = []
+        print(f"indexed_page_ids{self.indexed_page_ids}")
+        for doc_id in self.indexed_page_ids:
+            try:
+                with open(f"modules/chattim/{doc_id}.json", "r") as file:
+                    page_embeddings.append(json.load(file))
+            except Exception as e:
+                print(f"Error retrieving embeddings {e}")
 
         return page_embeddings
 
-    def get_context(self, prompt: str, file_name: str, k: int):
+    def get_context(self, prompt: str, k: int = 3) -> ContextResponse:
         """returns the context for the prompt as list of text,and the number of tokens used,"""
         prompt = TextChunks(chunks=[prompt])
         tokens_used = 0
@@ -186,13 +200,17 @@ class Indexer:
 
         except Exception as e:
             return f"Prompt embedding error: {e}"
-        page_embeddings = self.get_embeddings(file_name)
+        page_embeddings = self.get_embeddings()
 
         embeddings: list[float] = []
         texts = []
-        for chunk in page_embeddings:
-            embeddings.append(chunk["embedding"])
-            texts.append(chunk["text"])
+        print(f"page embeddings{page_embeddings}")
+        for page in page_embeddings:
+            for chunk in page:
+                print(chunk["embedding"])
+                embeddings.append(chunk["embedding"])
+                texts.append(chunk["text"])
+
         embeddings = np.array(embeddings)
 
         # manual cosine similarity
@@ -209,5 +227,5 @@ class Indexer:
         context = []
 
         [context.append(text) for text, similarity in best_chunks]
-
-        return context, tokens_used
+        context = ", ".join(context)
+        return ContextResponse(context=context, tokens_used=tokens_used)

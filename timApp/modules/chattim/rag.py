@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import Iterable
+from timApp.modules.chattim.indexer import EmbeddingModel, ContextResponse
 from timApp.modules.chattim.model import (
     ChatModel,
     GenerateOptions,
@@ -103,6 +104,8 @@ def sum_chunks(iterable: Iterable[ModelResponseChunk]) -> ModelResponseChunk:
 class Rag:
     registry: ModelRegistry = ModelRegistry(SUPPORTED_MODELS)
     models: dict[int, ChatModel] = {}
+    embedding_model: EmbeddingModel | None = None
+    indexer = None
 
     def add_model(self, spec: ModelSpec, identifier: int):
         """
@@ -116,6 +119,15 @@ class Rag:
 
         model = self.registry.create(spec)
         self.models[identifier] = model
+
+    def add_embedding_model(self, model: EmbeddingModel):
+        self.embedding_model = model
+
+    def add_indexer(self, indexer):
+        self.indexer = indexer
+
+    def get_context(self, prompt, indexed_page_ids) -> ContextResponse:
+        return self.indexer.get_context(prompt, indexed_page_ids)
 
     def remove_model(self, identifier: int):
         """
