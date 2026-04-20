@@ -3,7 +3,7 @@ from typing import Protocol
 import json
 from openai import OpenAI
 import numpy as np
-
+import os
 from timApp.document.document import Document
 from timApp.modules.chattim.database_handler import TimDatabase
 
@@ -117,14 +117,17 @@ class OpenAiEmbeddingModel(EmbeddingModel):
 
 # TODO tekstin paloitteluun eri vaihtoehtoja
 class Indexer:
-    def __init__(self, embedding_model: EmbeddingModel):
+    def __init__(self, embedding_model: EmbeddingModel, file_path: str):
         """
 
         :param embedding_model: embedding model object used for generating embeddings and for searching context
         :param indexed_page_ids: list of page ids that are currently indexed
+        :param root_dir: root directory for storing index files
         """
         self.embedding_model = embedding_model
         self.indexed_page_ids = []
+        self.root_path = os.path.join(file_path, "embeddings", "chattim")
+
         # self.text_chunker = text_chunker
 
     def delete_page(self, doc_id) -> bool:
@@ -185,8 +188,10 @@ class Indexer:
             ]
             data_dict = [asdict(obj) for obj in data]
             file_name = document.doc_id
+            os.makedirs(self.root_path, exist_ok=True)
             try:
-                with open(f"modules/chattim/{file_name}.json", "w") as f:
+                with open(f"{self.root_path}/{file_name}.json", "w") as f:
+                    print(self.root_path)
                     json.dump(data_dict, f, indent=2)
                     self.indexed_page_ids.append(document.doc_id)
             except Exception as e:
@@ -202,7 +207,7 @@ class Indexer:
         print(f"indexed_page_ids{self.indexed_page_ids}")
         for doc_id in self.indexed_page_ids:
             try:
-                with open(f"modules/chattim/{doc_id}.json", "r") as file:
+                with open(f"{self.root_path}/{doc_id}.json", "r") as file:
                     page_embeddings.append(json.load(file))
             except Exception as e:
                 print(f"Error retrieving embeddings {e}")

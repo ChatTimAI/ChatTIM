@@ -325,7 +325,8 @@ class PluginCore:
         emb_model = OpenAiEmbeddingModel(api_key=api_key)
         self.rag.add_embedding_model(emb_model)
         indexed_page_ids = [doc.doc_id for doc in docs]
-        indexer = Indexer(emb_model)
+        file_path = get_files_path().as_posix()
+        indexer = Indexer(emb_model, file_path)
 
         self.rag.add_indexer(indexer)
         tokens_used = indexer.create_embeddings(documents=docs)
