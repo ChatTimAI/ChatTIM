@@ -117,14 +117,14 @@ class OpenAiEmbeddingModel(EmbeddingModel):
 
 # TODO tekstin paloitteluun eri vaihtoehtoja
 class Indexer:
-    def __init__(self, embedding_model: EmbeddingModel, indexed_page_ids):
+    def __init__(self, embedding_model: EmbeddingModel):
         """
 
         :param embedding_model: embedding model object used for generating embeddings and for searching context
         :param indexed_page_ids: list of page ids that are currently indexed
         """
         self.embedding_model = embedding_model
-        self.indexed_page_ids = indexed_page_ids
+        self.indexed_page_ids = []
         # self.text_chunker = text_chunker
 
     def delete_page(self, doc_id) -> bool:
@@ -188,6 +188,7 @@ class Indexer:
             try:
                 with open(f"modules/chattim/{file_name}.json", "w") as f:
                     json.dump(data_dict, f, indent=2)
+                    self.indexed_page_ids.append(document.doc_id)
             except Exception as e:
                 print(f"Error saving embeddings {e}")
 
