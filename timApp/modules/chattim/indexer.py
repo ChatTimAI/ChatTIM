@@ -122,6 +122,14 @@ class Indexer:
         self.indexed_page_ids = indexed_page_ids
         # self.text_chunker = text_chunker
 
+    def delete_page(self, doc_id) -> bool:
+        """Deletes the page from the index. Returns True if the page was deleted"""
+        if doc_id in self.indexed_page_ids:
+            self.indexed_page_ids.remove(doc_id)
+            return True
+        else:
+            return False
+
     # tätä ei ehkä tarvita enään
     def chunk_text(self, text, max_chunk_size: int = 600, overlap: int = 100):
         chunks = []
