@@ -118,12 +118,19 @@ class OpenAiEmbeddingModel(EmbeddingModel):
 # TODO tekstin paloitteluun eri vaihtoehtoja
 class Indexer:
     def __init__(self, embedding_model: EmbeddingModel, indexed_page_ids):
+        """
+
+        :param embedding_model: embedding model object used for generating embeddings and for searching context
+        :param indexed_page_ids: list of page ids that are currently indexed
+        """
         self.embedding_model = embedding_model
         self.indexed_page_ids = indexed_page_ids
         # self.text_chunker = text_chunker
 
     def delete_page(self, doc_id) -> bool:
-        """Deletes the page from the index. Returns True if the page was deleted"""
+        """Deletes the page from the index.
+        :param doc_id: id of the page to delete
+        :return: True if the page was deleted, otherwise False"""
         if doc_id in self.indexed_page_ids:
             self.indexed_page_ids.remove(doc_id)
             return True
@@ -149,6 +156,7 @@ class Indexer:
 
     # TODO ei haeta mahdollisia plugin lohkoja
     def get_tim_blocks(self, doc: Document) -> TextChunks:
+        """returns the text chunks from provided tim document"""
         try:
             blocks = doc.export_raw_data()
             text = [block["md"] for block in blocks]
@@ -158,7 +166,9 @@ class Indexer:
         return TextChunks(chunks=text)
 
     def create_embeddings(self, documents: list[Document]) -> int:
-        """generates the data object containing embeddings and corresponding text chunks,returns the number of tokens used"""
+        """generates the data object containing embeddings and corresponding text chunks
+        :param documents: list of tim documents
+        :return: number of tokens used"""
         tokens_used = 0
         for document in documents:
             chunks = self.get_tim_blocks(doc=document)
@@ -186,6 +196,7 @@ class Indexer:
     def get_embeddings(
         self,
     ):
+        """returns embeddings for the indexed pages"""
         page_embeddings = []
         print(f"indexed_page_ids{self.indexed_page_ids}")
         for doc_id in self.indexed_page_ids:
@@ -198,7 +209,11 @@ class Indexer:
         return page_embeddings
 
     def get_context(self, prompt: str, k: int = 3) -> ContextResponse:
-        """returns the context for the prompt as list of text,and the number of tokens used,"""
+        """returns the context for the prompt as list of text,and the number of tokens used
+        :param prompt: prompt that is used to search for context
+        :param k: number of tim chunks to return
+        :return: ContextResponse object containing the context and the number of tokens used
+        """
         prompt = TextChunks(chunks=[prompt])
         tokens_used = 0
         try:
