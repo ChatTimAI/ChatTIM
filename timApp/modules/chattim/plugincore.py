@@ -126,7 +126,7 @@ class PluginCore:
         mode: RagMode = RagMode.RETRIEVE
         # TODO: No need for this attribute if we have character limit for input? Maybe keep as is for an option
         max_tokens_for_req = 99999
-        response = self.rag.get_context(validated_input, document_id)
+        response = self.rag.get_context(prompt=validated_input, identifier=document_id)
         context = response.context
 
         msg_data = MessageData(
@@ -323,12 +323,12 @@ class PluginCore:
         # TODO: indeksoinnit pyörimään
 
         emb_model = OpenAiEmbeddingModel(api_key=api_key)
-        self.rag.add_embedding_model(emb_model)
+
         indexed_page_ids = [doc.doc_id for doc in docs]
         file_path = get_files_path().as_posix()
         indexer = Indexer(emb_model, file_path)
 
-        self.rag.add_indexer(indexer)
+        self.rag.add_indexer(indexer, identifier=document_id)
         tokens_used = indexer.create_embeddings(documents=docs)
         print(f"Tokens used for indexing: {tokens_used}")
         self.list_of_instance_ids.append(
