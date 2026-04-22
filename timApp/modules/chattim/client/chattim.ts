@@ -29,8 +29,8 @@ import {
     HttpEventType,
 } from "@angular/common/http";
 import {DomSanitizer} from "@angular/platform-browser";
+import type {ChatModel, ControlPanelSettings} from "./controlpanel";
 import {Users} from "tim/user/userService";
-import type {CtrlPanelData} from "./controlpanel";
 import {ChatControlPanelComponent} from "./controlpanel";
 
 const PluginMarkupFields = t.intersection([
@@ -68,8 +68,12 @@ export interface AskResponse {
 
 export interface AskParams {
     input: string;
-    user_id: number;
     document_id: number;
+}
+
+export interface ControlPanelData extends ControlPanelSettings {
+    availableModels: ChatModel[];
+    availableModes: string[];
 }
 
 // Huom: <tim-dialog-frame ei sisällä markupError attribuuttia
@@ -80,7 +84,6 @@ export interface AskParams {
     // TODO: Display message datetime from the timestamp with `dateString()`
     template: `
         <tim-dialog-frame class="chattim-dialog-frame" [size]="'md'">
-
             <ng-container header> {{ header }}</ng-container>
             <ng-container body>
                 <div class="chattim-body">
@@ -109,29 +112,30 @@ export interface AskParams {
                               oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px'">
                     </textarea>
 
-                        <button class="timButton flex-shrink-0 ms-2"
-                                *ngIf="buttonText()"
-                                [disabled]="!canSendInput()"
-                                (click)="sendUserInput()"
-                                [innerHTML]="buttonText() | purify">
-                        </button>
-
-                    </div>
-                    <div class="control-panel-container" *ngIf="isTeacher">
-                        <chattim-control-panel
-                            *ngIf="isTeacher"
-                            (saveSettingsClick)="onSaveSettings($event)"
-                            (panelToggled)="onControlPanelToggle($event)"
-                            [selectedModel]="selectedModel"
-                            [selectedMode]="selectedMode"
-                            [maxTokens]="maxTokens"
-                            [response]="controlpanelResponse"
-                            [error]="controlpanelError">
-                        </chattim-control-panel>
-                    </div>
+                    <button class="timButton flex-shrink-0 ms-2"
+                            *ngIf="buttonText()"
+                            [disabled]="!canSendInput()"
+                            (click)="sendUserInput()"
+                            [innerHTML]="buttonText() | purify">
+                    </button>
+                        </div>
+                        <div class="control-panel-container">
+                    <chattim-control-panel 
+                        [isTeacher]="isTeacher"
+                        (saveSettingsClick)="onSaveSettings($event)"
+                        (panelToggled)="onControlPanelToggle($event)"
+                        [selectedModel]="selectedModel"
+                        [selectedMode]="selectedMode"
+                        [maxTokens]="maxTokens"
+                        [response]="controlpanelResponse"
+                        [error]="controlpanelError"
+                        [localFilePaths]="localFilePaths"
+                        [availableModels]="availableModels"
+                        [availableModes]="availableModes" >
+                    </chattim-control-panel>
+                            </div>
                 </div>
             </ng-container>
-
         </tim-dialog-frame>
     `,
     styleUrls: ["./chattim.scss"],
@@ -191,16 +195,18 @@ export class ChatTIMComponent
     error?: string;
     isRunning: boolean = false;
     userInput = "";
-    inputStem = "";
+    inputStem = ""; // TODO: do something with this or remove?
     document_id = -1;
     isTeacher: boolean = false;
 
-    // TODO: fetch default values from server?
+    localFilePaths = "";
+    selectedMode = "Creative";
     selectedModel = "gpt-4.1-mini";
-    selectedMode = "Summarizing";
     maxTokens = 1000;
     controlpanelError?: string;
     controlpanelResponse?: string;
+    availableModels?: ChatModel[];
+    availableModes?: string[];
 
     // TODO: make a configurable option for user in settings?
     useStreaming: boolean = true;
@@ -225,6 +231,7 @@ export class ChatTIMComponent
          early crashes thus we call in ngAfterViewInit */
         this.initDocId();
         await this.initScrollContainer();
+        await this.getControlPanelData();
         await this.fetchRights();
     }
     async fetchRights(): Promise<void> {
@@ -335,11 +342,9 @@ export class ChatTIMComponent
      */
     async fetchMessages(n: number, ts_end?: number): Promise<Message[]> {
         const url = this.route("getMessages");
-        const user_id: number = Users.getCurrent().id;
         const document_id: number = this.document_id;
 
         const response = await this.httpPost<{messages: Message[]}>(url, {
-            user_id: user_id,
             document_id: document_id,
             amount: n,
             timestamp_end_ms: ts_end,
@@ -450,10 +455,8 @@ export class ChatTIMComponent
 
         const input: string = this.userInput;
         this.userInput = "";
-        // TODO: ei tarvita user id?
-        const user_id: number = Users.getCurrent().id;
         const document_id: number = this.document_id;
-        const body: AskParams = {input, user_id, document_id};
+        const body: AskParams = {input, document_id};
 
         const entry: ChatEntry = {
             user: {content: input, role: "user", timestamp_ms: Date.now()},
@@ -590,27 +593,65 @@ export class ChatTIMComponent
         });
     }
 
-    async onSaveSettings(ctrlpanel_data: CtrlPanelData) {
+    /**
+     * To get the stored/default instance values for control panel. Gets also
+     * supported models and modes
+     */
+    async getControlPanelData() {
         this.isRunning = true;
 
-        // TODO: ei tarvita user id?
-        const user_id: number = Users.getCurrent().id;
+        const getRequest = {
+            document_id: this.document_id,
+        };
+        // Note: this is POST due to GET not being able to transfer int
+        const response = await this.httpPost<{
+            result: ControlPanelData;
+            error?: string;
+        }>(this.route("getSettings"), getRequest);
+
+        this.isRunning = false;
+        if (response.ok) {
+            const data = response.result;
+            const result = data.result;
+            this.controlpanelError = data.error;
+            if (
+                this.controlpanelError === undefined ||
+                this.controlpanelError === ""
+            ) {
+                this.selectedModel = result.model_id;
+                this.selectedMode = result.llm_mode;
+                this.maxTokens = result.max_tokens;
+                this.localFilePaths = result.tim_paths;
+                this.availableModels = result.availableModels;
+                this.availableModes = result.availableModes;
+            }
+        } else {
+            this.controlpanelError = response.result.error.error;
+        }
+    }
+
+    /**
+     * To save the settings given by user
+     * @param controlPanelSettings holds the values set by user
+     */
+    async onSaveSettings(controlPanelSettings: ControlPanelSettings) {
+        this.isRunning = true;
 
         const save_request = {
-            user_id: user_id,
             document_id: this.document_id,
-            control_panel_data: ctrlpanel_data,
+            control_panel_settings: controlPanelSettings,
         };
 
         const response = await this.httpPost<{
             web: {result: string; error?: string};
-        }>("/chattim/settings_save", save_request);
+        }>(this.route("saveSettings"), save_request);
 
         this.isRunning = false;
         if (response.ok) {
             const data = response.result;
             this.controlpanelError = data.web.error;
             this.controlpanelResponse = data.web.result;
+            this.error = undefined; // on successful save we clear chattim-error, maybe not great
         } else {
             this.controlpanelError = response.result.error.error;
         }

@@ -1,7 +1,9 @@
 import os
 import uuid
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from unicodedata import normalize, category
+
+from openai import models
 
 from timApp.timdb.dbaccess import get_files_path
 from timApp.auth.get_user_rights_for_item import UserItemRights
@@ -21,7 +23,7 @@ from timApp.modules.chattim.rag import (
     sum_chunks,
     ModelInfo,
 )
-from typing import Generic, TypeVar, TypedDict
+from typing import Generic, TypeVar, TypedDict, cast
 
 from timApp.modules.chattim.model import (
     ModelResponseChunk,
@@ -32,16 +34,33 @@ from timApp.modules.chattim.model import (
 )
 from timApp.modules.chattim.conversation import ConversationManager, ChatMessage
 
-T = TypeVar("T")
-E = TypeVar("E")
+
+@dataclass(frozen=True)
+class ChatModel(TypedDict):
+    label: str
+    value: str
 
 
 @dataclass()
 class InstanceAttributes:
-    model_id: str
-    llm_mode: str
-    max_tokens: int
-    tim_paths: str
+    model_id: str = "gpt-4.1-mini"
+    llm_mode: str = "Creative"
+    max_tokens: int = 2000
+    tim_paths: str = ""
+
+    @classmethod
+    def default(cls) -> "InstanceAttributes":
+        return cls()
+
+
+@dataclass
+class InstanceSettingsData(InstanceAttributes):
+    availableModels: list[ChatModel] = field(kw_only=True)
+    availableModes: list[str] = field(kw_only=True)
+
+
+T = TypeVar("T")
+E = TypeVar("E")
 
 
 class Result(Generic[T, E]):
@@ -274,6 +293,30 @@ class PluginCore:
 
         return Result(value=gen(), error=None)
 
+    def get_plugin_settings(
+        self, user_id: int, document_id: int
+    ) -> Result[InstanceAttributes | None, str | None]:
+        """
+        Get the settings for the plugin.
+        """
+        # if no such plugin exists return defaults
+        if not self._document_exists(document_id):
+            return Result(None, f"Document [{document_id}] does not exist")
+
+        if not self._owns_document(user_id, document_id):
+            return Result(None, "Insufficient rights")
+
+        if not self._instance_exists(document_id):
+            # TODO: get settings from db
+            pass
+
+        data = InstanceSettingsData(
+            availableModes=RagMode.supported_modes(),
+            availableModels=self._get_supported_chat_models(),
+        )
+
+        return Result(value=data)
+
     def save_instance(
         self, caller_id, document_id: int, instance_settings: InstanceAttributes
     ) -> Result[bool | None, str | None]:
@@ -289,6 +332,9 @@ class PluginCore:
         llm_mode: str = instance_settings.llm_mode
         max_tokens: int = instance_settings.max_tokens
         tim_paths: str = instance_settings.tim_paths
+
+        if not self._document_exists(document_id):
+            return Result(None, f"Document [{document_id}] does not exist")
 
         if not self._owns_document(caller_id, document_id):
             return Result(None, "Insufficient rights")
@@ -365,6 +411,15 @@ class PluginCore:
             document_id, caller_id, ts_begin, ts_end, max_count
         )
 
+    def _get_supported_chat_models(self) -> list[ChatModel]:
+        chat_models: list[ChatModel] = []
+        for model_spec in self.rag.get_supported_models().values():
+            chat_models.append(
+                ChatModel(label=model_spec.label, value=model_spec.model_id)
+            )
+
+        return chat_models
+
     def change_chatmode(self, caller_id: str, document_id: int, mode: RagMode):
         pass
 
@@ -406,7 +461,6 @@ class PluginCore:
 
         for right in rights:
             if not right:
-                # TODO: proper errors?
                 raise Exception(f"(_owns_items) given UserItemRight does not exist")
 
         return True
@@ -458,6 +512,13 @@ class PluginCore:
 
         return Result(value=doc_set)
 
+    def _document_exists(self, document_id: int) -> bool:
+        """Checks if document with given id exists in tim database"""
+        if not self.tim_database.get_tim_document_by_id(document_id):
+            return False
+
+        return True
+
     def _owns_all_items(
         self, user_id: int, documents: list[Document]
     ) -> Result[bool | None, str | None]:
@@ -498,12 +559,18 @@ class PluginCore:
             return None
 
     @staticmethod
-    def validate_api_key(provider: Provider, api_key: str) -> bool:
+    def validate_api_key(provider_str: str, api_key: str) -> bool:
         """Check if the api key is valid."""
+        if provider_str not in Provider.__args__:
+            return False
+        provider = cast(Provider, provider_str)
         client = GenericApiClient(provider, api_key)
-        valid = client.verify_api_key()
-        client.close()
-        return valid
+        try:
+            return client.verify_api_key()
+        except ModelError:
+            return False
+        finally:
+            client.close()
 
     @staticmethod
     def _sanitize_input(user_input: str) -> str:
@@ -531,3 +598,6 @@ class PluginCore:
         if input_len < 2 or input_len > self.max_input_len:
             raise ValueError(f"Invalid input length: {input_len}")
         return sanitized_input
+
+    def get_supported_providers(self):
+        return self.rag.registry.get_supported_providers()
