@@ -40,14 +40,11 @@ class InstanceAttributes:
 
 
 class Result(Generic[T, E]):
-    def __init__(
-        self, value: T | None = None, error: E | None = None, tokens: int | None = None
-    ):
+    def __init__(self, value: T | None = None, error: E | None = None):
         if (value is None) == (error is None):
             raise ValueError("Provide exactly one of value or error")
         self.value: T | None = value
         self.error: E | None = error
-        self.tokens: int | None = tokens
 
     def ok(self) -> bool:
         return self.error is None
@@ -270,6 +267,7 @@ class PluginCore:
 
         return Result(value=gen(), error=None)
 
+    # TODO indeksointiin käytetyt tokenit
     def save_instance(
         self, caller_id, document_id: int, instance_settings: InstanceAttributes
     ) -> Result[bool | None, str | None]:
@@ -338,7 +336,7 @@ class PluginCore:
             document_id
         )  # TODO: for testing purposes remove when db ok or cache
 
-        return Result(True, None, tokens=tokens_used)
+        return Result(True, None)
 
     def remove_instance(self, caller_id: str, document_id: int):
         pass
