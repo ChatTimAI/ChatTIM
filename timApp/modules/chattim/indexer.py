@@ -34,15 +34,17 @@ class ContextResponse:
 
 @dataclass
 class EmbeddingData:
-    """embedding and
-    corresponding text chunk.
-    file/tim page name or address?
-    chunk id
+    """
+    :param embedding: embedding vector
+    :param text: text chunk
+    :param block_id: id of the chunk in the tim document
+    :param document_id: id of the tim document
     """
 
     embedding: list[float]
     text: str
-    id: int
+    block_id: int
+    document_id: int
     # filename: str
 
 
@@ -178,12 +180,14 @@ class Indexer:
 
             embeddings = self.embedding_model.generate(chunks)
             tokens_used += embeddings.used_tokens
-            ids = list(range(len(chunks.chunks)))
-
+            block_ids = list(range(len(chunks.chunks)))
+            document_id = document.doc_id
             data = [
-                EmbeddingData(embedding=embedding, text=text, id=i)
+                EmbeddingData(
+                    embedding=embedding, text=text, block_id=i, document_id=document_id
+                )
                 for (embedding, text, i) in zip(
-                    embeddings.embeddings, chunks.chunks, ids
+                    embeddings.embeddings, chunks.chunks, block_ids
                 )
             ]
             data_dict = [asdict(obj) for obj in data]
