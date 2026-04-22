@@ -120,13 +120,13 @@ class Rag:
         self.models[identifier] = model
 
     # tätä ei varmaankaan tarvita
-    def add_embedding_model(self, model: EmbeddingModel, identifier: int):
+    def add_embedding_model(self, model: EmbeddingModel, identifier: int) -> None:
         self.embedding_models[identifier] = model
 
-    def add_indexer(self, indexer, identifier: int):
+    def add_indexer(self, indexer, identifier: int) -> None:
         self.indexers[identifier] = indexer
 
-    def get_context(self, prompt, identifier: int) -> ContextResponse:
+    def get_context(self, prompt: str, identifier: int) -> ContextResponse:
         """retrive context for user prompt
         :param prompt: user prompt used for searching context
         :identifier: identifier of the model"""

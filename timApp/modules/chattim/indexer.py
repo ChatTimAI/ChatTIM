@@ -127,12 +127,12 @@ class Indexer:
         :param root_dir: root directory for storing index files
         """
         self.embedding_model = embedding_model
-        self.indexed_page_ids = []
+        self.indexed_page_ids = list[int]
         self.root_path = os.path.join(file_path, "embeddings", "chattim")
 
         # self.text_chunker = text_chunker
 
-    def delete_page(self, doc_id) -> bool:
+    def delete_page(self, doc_id: int) -> bool:
         """Deletes the page from the index.
         :param doc_id: id of the page to delete
         :return: True if the page was deleted, otherwise False"""
@@ -144,7 +144,9 @@ class Indexer:
 
     # tätä ei ehkä tarvita enään
 
-    def chunk_text(self, text, max_chunk_size: int = 600, overlap: int = 100):
+    def chunk_text(
+        self, text: str, max_chunk_size: int = 600, overlap: int = 100
+    ) -> TextChunks:
         chunks = []
         sentences = text.split(". ")
         current_chunk = ""
@@ -204,6 +206,7 @@ class Indexer:
 
         return tokens_used
 
+    # TODO dataclass for page_embeddings?
     def get_embeddings(
         self,
     ):
@@ -225,15 +228,18 @@ class Indexer:
         :param k: number of tim chunks to return
         :return: ContextResponse object containing the context and the number of tokens used
         """
-        prompt = TextChunks(chunks=[prompt])
+
         tokens_used = 0
         try:
-            prompt_embedding = self.embedding_model.generate(prompt)
+            prompt_embedding = self.embedding_model.generate(
+                TextChunks(chunks=[prompt])
+            )
             tokens_used = prompt_embedding.used_tokens
             prompt_embedding = np.array(prompt_embedding.embeddings[0])
 
         except Exception as e:
-            return f"Prompt embedding error: {e}"
+            print(f"Prompt embedding error: {e}")
+            ContextResponse(context="", tokens_used=tokens_used)
         page_embeddings = self.get_embeddings()
 
         embeddings: list[float] = []
@@ -259,7 +265,7 @@ class Indexer:
 
         best_chunks = data[0:k]
         context = []
-
-        [context.append(text) for text, similarity in best_chunks]
-        context = ", ".join(context)
-        return ContextResponse(context=context, tokens_used=tokens_used)
+        for text, similarity in best_chunks:
+            context.append(text)
+        context_string = ", ".join(context)
+        return ContextResponse(context=context_string, tokens_used=tokens_used)
