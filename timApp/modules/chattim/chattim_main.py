@@ -2,12 +2,18 @@ from dataclasses import dataclass
 from flask import request, Response, stream_with_context
 from typing import Any, TypedDict, Callable
 from webargs.flaskparser import use_args
+
+from timApp.auth.accesshelper import (
+    verify_logged_in,
+    verify_teacher_access,
+    get_doc_or_abort,
+)
+from timApp.util.flask.requesthelper import RouteException
 from tim_common.marshmallow_dataclass import class_schema
 
-from timApp.auth.accesshelper import verify_teacher_access, get_doc_or_abort
 from timApp.auth.sessioninfo import get_current_user_id
 from timApp.tim_app import csrf
-from timApp.util.flask.responsehelper import json_response, to_json_str
+from timApp.util.flask.responsehelper import json_response, to_json_str, ok_response
 from tim_common.markupmodels import GenericMarkupModel
 from tim_common.pluginserver_flask import (
     GenericHtmlModel,
@@ -41,7 +47,6 @@ ChatTimStateModel = dict[str, Any]
 
 @dataclass
 class GenericParams:
-    user_id: int
     document_id: int
 
 
@@ -74,7 +79,7 @@ class ChatTimAskParams(GenericParams):
 
 @dataclass
 class ChatTimSaveSettingsParams(GenericParams):
-    control_panel_data: InstanceAttributes
+    control_panel_settings: InstanceAttributes
 
 
 @dataclass
@@ -83,23 +88,44 @@ class GetMessagesParams(GenericParams):
     timestamp_end_ms: int | None = None
 
 
+@dataclass
+class SaveAPIKeyParams:
+    model: str  # TODO: rename to provider
+    apikey: str
+    alias: str
+
+
+@dataclass
+class ChatTIMGetSettingsResponse(TypedDict, total=False):
+    result: InstanceAttributes
+    error: str | None
+
+
 def register_route(
     app: Flask | Blueprint,
     method: str,
     route: str,
-    route_model: type,
-    route_handler: Callable[[Any], Any],
+    route_model: type | None,
+    route_handler: Callable[..., Any],
 ) -> None:
-    @app.route(f"/{route}", methods=[method])
-    @use_args(class_schema(route_model)(), locations=("json",))
-    def define(m: Any) -> Response:
-        r = route_handler(m)
+    def to_response(r: Any) -> Response:
         # Allow handlers to define their own Flask Response
         if isinstance(r, Response):
             return r
         return jsonify(r)
 
-    setattr(define, "__name__", route)
+    if route_model is None:
+
+        @app.route(f"/{route}", methods=[method], endpoint=route)
+        def define() -> Response:
+            return to_response(route_handler())
+
+        return
+
+    @app.route(f"/{route}", methods=[method], endpoint=route)
+    @use_args(class_schema(route_model)(), locations=("json",))
+    def define(m: Any) -> Response:
+        return to_response(route_handler(m))
 
 
 @dataclass
@@ -146,12 +172,8 @@ header: ChatTIM
 
 def define_ask_route(params: ChatTimAskParams) -> ChatTimAskResponse:
     user_input = params.input
-    user_id = params.user_id
     document_id = params.document_id
     session_user_id = get_current_user_id()
-    # TODO onko tarkistus tarpeellinen, vai käytetäänkö vain session_user_id?
-    if user_id != session_user_id:
-        pass
 
     resp = plugincore.chat_request(session_user_id, document_id, user_input)
 
@@ -164,13 +186,9 @@ def define_ask_route(params: ChatTimAskParams) -> ChatTimAskResponse:
 
 def define_ask_stream_route(params: ChatTimAskParams) -> Response:
     user_input = params.input
-    user_id = params.user_id
     document_id = params.document_id
 
     session_user_id = get_current_user_id()
-    # TODO onko tarkistus tarpeellinen, vai käytetäänkö vain session_user_id?
-    if user_id != session_user_id:
-        pass
 
     def generate():
         resp = plugincore.chat_request_stream(session_user_id, document_id, user_input)
@@ -191,19 +209,26 @@ def define_ask_stream_route(params: ChatTimAskParams) -> Response:
     )
 
 
+def define_get_settings(params: GenericParams) -> ChatTIMGetSettingsResponse:
+    ret: ChatTIMGetSettingsResponse = {}
+    document_id = params.document_id
+    session_user_id = get_current_user_id()
+
+    error_or_ok = plugincore.get_plugin_settings(session_user_id, document_id)
+    if not error_or_ok.ok():
+        ret["error"] = error_or_ok.error
+        return ret
+
+    ret["result"] = error_or_ok.value
+    return ret
+
+
 def define_save_settings(params: ChatTimSaveSettingsParams) -> PluginAnswerResp:
     web: PluginAnswerWeb = {}
     result: PluginAnswerResp = {"web": web}
 
-    user_id = params.user_id
+    panel_data = params.control_panel_settings
     document_id = params.document_id
-    panel_data = params.control_panel_data
-
-    session_user_id = get_current_user_id()
-    # TODO onko tarkistus tarpeellinen, vai käytetäänkö vain session_user_id?
-    if user_id != session_user_id:
-        pass
-
     session_user_id = get_current_user_id()
 
     error_or_ok = plugincore.save_instance(session_user_id, document_id, panel_data)
@@ -216,7 +241,7 @@ def define_save_settings(params: ChatTimSaveSettingsParams) -> PluginAnswerResp:
 
 
 def define_get_messages(params: GetMessagesParams) -> dict:
-    user_id = str(params.user_id)
+    user_id = str(get_current_user_id())
     document_id = str(params.document_id)
     amount = params.amount
     ts_end = params.timestamp_end_ms or ChatMessage.ts_ms()
@@ -228,6 +253,28 @@ def define_get_messages(params: GetMessagesParams) -> dict:
         if m.role in ("user", "assistant")
     ]
     return {"messages": messages}
+
+
+def define_save_api_key(params: SaveAPIKeyParams) -> Response:
+    verify_logged_in()
+
+    provider = params.model
+    key = params.apikey
+    alias = params.alias
+
+    valid = plugincore.validate_api_key(provider, key)
+
+    if valid:
+        return ok_response()
+    else:
+        raise RouteException(description="API Key is invalid.")
+
+    # TODO avaimen tallennus validoimisen jälkeen, jos avain jo niin palautetaan tieto siitä
+
+
+def define_get_providers() -> list[str]:
+    response = plugincore.get_supported_providers()
+    return response
 
 
 def to_ndjson_str(json_data: Any) -> str:
@@ -249,8 +296,11 @@ chattim = create_nontask_blueprint(
 
 register_route(chattim, "post", "ask", ChatTimAskParams, define_ask_route)
 register_route(chattim, "post", "askStream", ChatTimAskParams, define_ask_stream_route)
+register_route(chattim, "post", "getSettings", GenericParams, define_get_settings)
 register_route(
-    chattim, "post", "settings_save", ChatTimSaveSettingsParams, define_save_settings
+    chattim, "post", "saveSettings", ChatTimSaveSettingsParams, define_save_settings
 )
 register_route(chattim, "post", "getMessages", GetMessagesParams, define_get_messages)
+register_route(chattim, "post", "validate_api", SaveAPIKeyParams, define_save_api_key)
+register_route(chattim, "get", "get_providers", None, define_get_providers)
 register_route(chattim, "post", "getRights", GetRightsParams, define_get_rights)
