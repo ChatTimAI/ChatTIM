@@ -127,6 +127,9 @@ class Rag:
         self.indexers[identifier] = indexer
 
     def get_context(self, prompt, identifier: int) -> ContextResponse:
+        """retrive context for user prompt
+        :param prompt: user prompt used for searching context
+        :identifier: identifier of the model"""
         if identifier not in self.indexers:
             raise KeyError(f"Key '{identifier}' not found in the dictionary")
         return self.indexers[identifier].get_context(prompt)

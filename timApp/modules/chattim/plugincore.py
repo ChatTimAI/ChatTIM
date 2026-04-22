@@ -320,11 +320,11 @@ class PluginCore:
         api_key = os.getenv("OPENAI_API_KEY")
         spec = ModelSpec(provider="openai", model_id="gpt-4.1-nano", api_key=api_key)
         self.rag.add_model(spec, identifier=document_id)
-        # TODO: indeksoinnit pyörimään
+
+        # TODO:implementation for choosing embedding model provider
 
         emb_model = OpenAiEmbeddingModel(api_key=api_key)
 
-        indexed_page_ids = [doc.doc_id for doc in docs]
         file_path = get_files_path().as_posix()
         indexer = Indexer(emb_model, file_path)
 

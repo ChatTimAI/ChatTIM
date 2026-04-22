@@ -143,6 +143,7 @@ class Indexer:
             return False
 
     # tätä ei ehkä tarvita enään
+
     def chunk_text(self, text, max_chunk_size: int = 600, overlap: int = 100):
         chunks = []
         sentences = text.split(". ")
