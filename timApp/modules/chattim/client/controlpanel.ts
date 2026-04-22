@@ -34,7 +34,7 @@ export interface ControlPanelSettings extends Record<string, JsonValue> {
                 </div>
                 <div class="settings-row">
                     <button class="btn btn-warning">
-                        Tyhjennä keskustelu
+                        TODO: Tyhjennä keskustelu
                     </button>
                 </div>
             </ng-container>
