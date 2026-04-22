@@ -79,6 +79,10 @@ class RagMode(Enum):
     RETRIEVE = "Summarizing"
     CREATIVE = "Creative"
 
+    @classmethod
+    def supported_modes(cls) -> list[str]:
+        return [mode.value for mode in cls]
+
 
 @dataclass
 class MessageData:
@@ -143,6 +147,7 @@ class Rag:
             ValueError: If the provider or model is unknown
         """
         if identifier in self.models:
+            self.models[identifier].close()
             del self.models[identifier]
             del self.indexers[identifier]
 
@@ -156,11 +161,12 @@ class Rag:
     ) -> Iterable[ModelResponseChunk]:
         """
         Give an answer to the user using the model.
-        :param request_data: Information for the prompt
-        :param identifier: identifier of the model to be used
 
-        Raises:
-            ValueError: If the model isn't created
+        :param request_data: Information for the prompt.
+        :param identifier: identifier of the model to be used.
+        :raises KeyError: If the model isn't created.
+        :raises ModelError: If failed to generate an answer.
+        :return: Model answer in iterable chunks.
         """
 
         if identifier not in self.models:
@@ -169,18 +175,15 @@ class Rag:
         model = self.models[identifier]
         messages = self.build_prompt(request_data)
 
-        # TODO: simplify?
-        try:
-            if model.get_info().supports_streaming:
-                return model.generate_stream(messages, GenerateOptions())
+        if model.get_info().supports_streaming:
+            stream = model.generate_stream(messages, GenerateOptions())
+        else:
             res: ModelResponse = model.generate(messages, GenerateOptions())
-        except Exception as e:
-            # TODO: better error handling
-            print("error(RAG): ", str(e))
-            return []
+            stream = [ModelResponseChunk(delta=res.content, usage=res.usage, done=True)]
+
         # TODO: answer post processing
         # Include the urls/document ids?
-        return [ModelResponseChunk(delta=res.content, usage=res.usage, done=True)]
+        return stream
 
     def get_supported_models(
         self, provider: Provider | None = None
@@ -204,7 +207,6 @@ class Rag:
         """Build the message list to send to the model."""
         mode: RagMode = message_data.mode
         system_prompt: list[Message] = self.system_message(mode)
-        print(system_prompt)
         content: str = message_data.user_prompt
         history: list[Message] = message_data.chat_history
         context: str = message_data.context
