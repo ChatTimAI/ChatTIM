@@ -80,24 +80,26 @@ export interface AskParams {
     // TODO: Display message datetime from the timestamp with `dateString()`
     template: `
         <tim-dialog-frame class="chattim-dialog-frame" [size]="'md'">
+
             <ng-container header> {{ header }}</ng-container>
             <ng-container body>
-                <div class="scroll-box" #conversationScroll>
-                    <div *ngIf="conversation.length === 0" class="chat-welcome">
-                        Tervetuloa käyttämään TIM:in tekoälyavustajaa!
+                <div class="chattim-body">
+                    <div class="scroll-box" #conversationScroll>
+                        <div *ngIf="conversation.length === 0" class="chat-welcome">
+                            Tervetuloa käyttämään TIM:in tekoälyavustajaa!
+                        </div>
+                        <div *ngFor="let entry of conversation">
+                            <div class="chat-user">{{ entry.user.content }}</div>
+                            <div class="chat-bot" [innerHTML]="entry.agent.content | purify"></div>
+                        </div>
                     </div>
-                    <div *ngFor="let entry of conversation">
-                        <div class="chat-user">{{ entry.user.content }}</div>
-                        <div class="chat-bot" [innerHTML]="entry.agent.content | purify"></div>
-                    </div>
-                </div>
 
-                <div>
-                    <tim-loading *ngIf="isRunning"></tim-loading>
-                    <div *ngIf="error" [innerHTML]="error | purify"></div>
-                </div>
-                <label class="justify-center w-100">{{ inputStem }} </label>
-                <div class="d-flex flex-row w-100 justify-content-center chat-row">
+                    <div>
+                        <tim-loading *ngIf="isRunning"></tim-loading>
+                        <div *ngIf="error" [innerHTML]="error | purify"></div>
+                    </div>
+                    <label class="justify-center w-100">{{ inputStem }} </label>
+                    <div class="d-flex flex-row w-100 justify-content-center chat-row">
                     <textarea class="form-control chat-textarea"
                               rows="2"
                               placeholder="Kysy minulta TIM asioista"
@@ -107,23 +109,29 @@ export interface AskParams {
                               oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px'">
                     </textarea>
 
-                    <button class="timButton flex-shrink-0 ms-2"
-                            *ngIf="buttonText()"
-                            [disabled]="!canSendInput()"
-                            (click)="sendUserInput()"
-                            [innerHTML]="buttonText() | purify">
-                    </button>
+                        <button class="timButton flex-shrink-0 ms-2"
+                                *ngIf="buttonText()"
+                                [disabled]="!canSendInput()"
+                                (click)="sendUserInput()"
+                                [innerHTML]="buttonText() | purify">
+                        </button>
 
+                    </div>
+                    <div class="control-panel-container" *ngIf="isTeacher">
+                        <chattim-control-panel
+                            *ngIf="isTeacher"
+                            (saveSettingsClick)="onSaveSettings($event)"
+                            (panelToggled)="onControlPanelToggle($event)"
+                            [selectedModel]="selectedModel"
+                            [selectedMode]="selectedMode"
+                            [maxTokens]="maxTokens"
+                            [response]="controlpanelResponse"
+                            [error]="controlpanelError">
+                        </chattim-control-panel>
+                    </div>
                 </div>
-                <chattim-control-panel
-                    (saveSettingsClick)="onSaveSettings($event)"
-                    [selectedModel]="selectedModel"
-                    [selectedMode]="selectedMode"
-                    [maxTokens]="maxTokens"
-                    [response]="controlpanelResponse"
-                    [error]="controlpanelError">
-                </chattim-control-panel>
             </ng-container>
+
         </tim-dialog-frame>
     `,
     styleUrls: ["./chattim.scss"],
@@ -136,6 +144,37 @@ export class ChatTIMComponent
     >
     implements AfterViewInit
 {
+    @ViewChild(ChatControlPanelComponent)
+    controlPanel!: ChatControlPanelComponent;
+    private hostElement!: ElementRef<HTMLElement>;
+
+    onControlPanelToggle(isOpen: boolean) {
+        const dialog = this.getModalDialog();
+        if (!dialog) return;
+        const panelEl = this.hostElement.nativeElement.querySelector(
+            ".settings-panel"
+        ) as HTMLElement | null;
+
+        if (isOpen) {
+            if (panelEl) {
+                panelEl.style.position = "absolute";
+                panelEl.style.visibility = "hidden";
+                panelEl.style.display = "block";
+                const panelHeight = panelEl.scrollHeight;
+                panelEl.style.position = "";
+                panelEl.style.visibility = "";
+                panelEl.style.display = "";
+            }
+            requestAnimationFrame(() => {
+                const panelHeight = panelEl ? panelEl.scrollHeight : 200;
+                dialog.style.height = `${dialog.offsetHeight + panelHeight}px`;
+            });
+        } else {
+            const panelHeight = panelEl ? panelEl.scrollHeight : 200;
+            dialog.style.height = `${dialog.offsetHeight - panelHeight}px`;
+        }
+    }
+
     @ViewChild("conversationScroll", {static: false}) scrollFrame!: ElementRef;
     private scrollContainer?: HTMLElement;
     private scrollScheduled: boolean = false;
@@ -154,6 +193,7 @@ export class ChatTIMComponent
     userInput = "";
     inputStem = "";
     document_id = -1;
+    isTeacher: boolean = false;
 
     // TODO: fetch default values from server?
     selectedModel = "gpt-4.1-mini";
@@ -171,6 +211,13 @@ export class ChatTIMComponent
         domSanitizer: DomSanitizer
     ) {
         super(el, http, domSanitizer);
+        this.hostElement = el;
+    }
+    private getModalDialog(): HTMLElement | null {
+        const dialogFrame =
+            this.hostElement.nativeElement.querySelector("tim-dialog-frame");
+        if (!dialogFrame) return null;
+        return dialogFrame.querySelector(".modal-dialog") as HTMLElement | null;
     }
 
     async ngAfterViewInit() {
@@ -178,6 +225,23 @@ export class ChatTIMComponent
          early crashes thus we call in ngAfterViewInit */
         this.initDocId();
         await this.initScrollContainer();
+        await this.fetchRights();
+    }
+    async fetchRights(): Promise<void> {
+        if (this.document_id <= 0) {
+            return;
+        }
+        const user_id: number = Users.getCurrent().id;
+        const response = await this.httpPost<{is_teacher: boolean}>(
+            this.route("getRights"),
+            {
+                user_id: user_id,
+                document_id: this.document_id,
+            }
+        );
+        if (response.ok) {
+            this.isTeacher = response.result.is_teacher;
+        }
     }
 
     async onEnter() {

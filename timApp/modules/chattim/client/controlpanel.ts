@@ -10,15 +10,14 @@ export interface ChatModel {
     selector: "chattim-control-panel",
     template: `
         <button class="btn btn-link settings-btn"
-                (click)="settingsOpen = !settingsOpen"
+                (click)="togglePanel()"
                 [attr.aria-expanded]="settingsOpen"
-                title="Open control panel"
-                style="float: right">
-            <span class="glyphicon glyphicon-cog" style="font-size: 1.5em;"></span>
+                title="Open control panel">
+            <span class="glyphicon glyphicon-cog" style="font-size: 1.8em;"></span>
         </button>
 
 
-        <div class="settings-panel" *ngIf="settingsOpen">
+        <div class="settings-panel" [style.display]="settingsOpen ? 'block' : 'none'">
 
             <!-- Choose the LLM -->
             <div class="settings-row">
@@ -75,7 +74,7 @@ export interface ChatModel {
                     <input type="range"
                            class="form-control"
                            min="100" max="10000" step="100"
-                           [(ngModel)]="maxTokens" >
+                           [(ngModel)]="maxTokens">
                 </div>
             </div>
 
@@ -97,7 +96,7 @@ export interface ChatModel {
                     </textarea>
                 </div>
             </div>
-            
+
             <!-- Save button that sends the chosen stuff -->
             <div class="settings-row">
                 <button class="btn btn-primary" style="margin: 2px;"
@@ -126,6 +125,13 @@ export class ChatControlPanelComponent {
     @Input() maxTokens: number = 1000;
 
     @Output() saveSettingsClick = new EventEmitter<CtrlPanelData>();
+
+    @Output() panelToggled = new EventEmitter<boolean>(); // add this
+
+    togglePanel() {
+        this.settingsOpen = !this.settingsOpen;
+        this.panelToggled.emit(this.settingsOpen);
+    }
 
     availableModels: ChatModel[] = [
         {label: "GPT-4o-Mini", value: "gpt-4.1-mini"},

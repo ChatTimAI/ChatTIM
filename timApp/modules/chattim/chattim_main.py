@@ -4,6 +4,7 @@ from typing import Any, TypedDict, Callable
 from webargs.flaskparser import use_args
 from tim_common.marshmallow_dataclass import class_schema
 
+from timApp.auth.accesshelper import verify_teacher_access, get_doc_or_abort
 from timApp.auth.sessioninfo import get_current_user_id
 from timApp.tim_app import csrf
 from timApp.util.flask.responsehelper import json_response, to_json_str
@@ -42,6 +43,22 @@ ChatTimStateModel = dict[str, Any]
 class GenericParams:
     user_id: int
     document_id: int
+
+
+@dataclass
+class GetRightsParams(GenericParams):
+    pass
+
+
+def define_get_rights(params: GetRightsParams) -> dict:
+    doc = get_doc_or_abort(params.document_id)
+    print(doc)
+    # verify_teacher_access returns the access object if teacher, None if not
+    teacher_access = verify_teacher_access(doc, require=False)
+
+    return {
+        "is_teacher": teacher_access is not None,
+    }
 
 
 class ChatTimAskResponse(TypedDict, total=False):
@@ -236,3 +253,4 @@ register_route(
     chattim, "post", "settings_save", ChatTimSaveSettingsParams, define_save_settings
 )
 register_route(chattim, "post", "getMessages", GetMessagesParams, define_get_messages)
+register_route(chattim, "post", "getRights", GetRightsParams, define_get_rights)
