@@ -127,7 +127,7 @@ class Indexer:
         :param root_dir: root directory for storing index files
         """
         self.embedding_model = embedding_model
-        self.indexed_page_ids = list[int]
+        self.indexed_page_ids: list[int] = []
         self.root_path = os.path.join(file_path, "embeddings", "chattim")
 
         # self.text_chunker = text_chunker
@@ -198,9 +198,9 @@ class Indexer:
             os.makedirs(self.root_path, exist_ok=True)
             try:
                 with open(f"{self.root_path}/{file_name}.json", "w") as f:
-                    print(self.root_path)
+                    # print(self.root_path)
                     json.dump(data_dict, f, indent=2)
-                    self.indexed_page_ids.append(document.doc_id)
+                    self.indexed_page_ids.append(file_name)
             except Exception as e:
                 print(f"Error saving embeddings {e}")
 
@@ -212,7 +212,6 @@ class Indexer:
     ):
         """returns embeddings for the indexed pages"""
         page_embeddings = []
-        print(f"indexed_page_ids{self.indexed_page_ids}")
         for doc_id in self.indexed_page_ids:
             try:
                 with open(f"{self.root_path}/{doc_id}.json", "r") as file:
@@ -244,7 +243,6 @@ class Indexer:
 
         embeddings: list[float] = []
         texts = []
-        print(f"page embeddings{page_embeddings}")
         for page in page_embeddings:
             for chunk in page:
                 print(chunk["embedding"])
