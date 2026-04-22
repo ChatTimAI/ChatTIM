@@ -216,7 +216,9 @@ def define_save_settings(params: ChatTimSaveSettingsParams) -> PluginAnswerResp:
         web["error"] = error_or_ok.error
         return result
 
-    web["result"] = "Settings saved!"
+    web[
+        "result"
+    ] = f"Settings saved! Tokens used for page indexing: {error_or_ok.tokens}"
     return result
 
 
