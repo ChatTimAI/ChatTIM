@@ -209,9 +209,9 @@ class Indexer:
     # TODO dataclass for page_embeddings?
     def get_embeddings(
         self,
-    ):
+    ) -> list[EmbeddingData]:
         """returns embeddings for the indexed pages"""
-        page_embeddings = []
+        page_embeddings: list[EmbeddingData] = []
         for doc_id in self.indexed_page_ids:
             try:
                 with open(f"{self.root_path}/{doc_id}.json", "r") as file:
