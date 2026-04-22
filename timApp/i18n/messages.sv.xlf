@@ -1,4 +1,4 @@
-<?xml version='1.0' encoding='UTF-8'?>
+<?xml version="1.0" encoding="UTF-8"?>
 <xliff xmlns="urn:oasis:names:tc:xliff:document:1.2" version="1.2">
   <file source-language="en-US" datatype="plaintext" original="ng2.template" target-language="sv">
     <body>
@@ -11419,6 +11419,38 @@ Mata in flera användares adresser på separata rader eller åtskilda med kommat
         <context-group purpose="location">
           <context context-type="sourcefile">static/scripts/tim/plugin/examGroupManager/exam-group-manager.component.ts</context>
           <context context-type="linenumber">618,620</context>
+        </context-group>
+      </trans-unit>
+      <trans-unit id="2826207906526690644" datatype="html">
+        <source> Add new LLM model API key </source>
+        <target state="translated"> ALägg till ny API-nyckel för språkmodell </target>
+        <context-group purpose="location">
+          <context context-type="sourcefile">static/scripts/tim/user/add-chattim-api-key-dialog.component.ts</context>
+          <context context-type="linenumber">36</context>
+        </context-group>
+      </trans-unit>
+      <trans-unit id="1447970220734495682" datatype="html">
+        <source>LLM model provider</source>
+        <target state="translated">Leverantör av språkmodelltjänst</target>
+        <context-group purpose="location">
+          <context context-type="sourcefile">static/scripts/tim/user/add-chattim-api-key-dialog.component.ts</context>
+          <context context-type="linenumber">42,43</context>
+        </context-group>
+      </trans-unit>
+      <trans-unit id="1965206604774400" datatype="html">
+        <source>Alias</source>
+        <target state="translated">Alias</target>
+        <context-group purpose="location">
+          <context context-type="sourcefile">static/scripts/tim/user/add-chattim-api-key-dialog.component.ts</context>
+          <context context-type="linenumber">50,51</context>
+        </context-group>
+      </trans-unit>
+      <trans-unit id="7991621302184166089" datatype="html">
+        <source>Chattim API Keys</source>
+        <target state="translated">Chattim API-nycklar</target>
+        <context-group purpose="location">
+          <context context-type="sourcefile">static/scripts/tim/user/settings.component.ts</context>
+          <context context-type="linenumber">646</context>
         </context-group>
       </trans-unit>
     </body>
