@@ -176,7 +176,9 @@ def define_save_settings(params: ChatTimSaveSettingsParams):
         web["error"] = error_or_ok.error
         return json_response(result)
 
-    web["result"] = "Settings saved!"
+    web[
+        "result"
+    ] = f"Settings saved! Tokens used for indexing pages: {error_or_ok.tokens}"
 
     return json_response(result)
 

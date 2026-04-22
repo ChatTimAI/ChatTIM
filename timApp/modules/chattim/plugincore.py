@@ -40,11 +40,14 @@ class InstanceAttributes:
 
 
 class Result(Generic[T, E]):
-    def __init__(self, value: T | None = None, error: E | None = None):
+    def __init__(
+        self, value: T | None = None, error: E | None = None, tokens: int | None = None
+    ):
         if (value is None) == (error is None):
             raise ValueError("Provide exactly one of value or error")
         self.value: T | None = value
         self.error: E | None = error
+        self.tokens: int | None = tokens
 
     def ok(self) -> bool:
         return self.error is None
@@ -335,7 +338,7 @@ class PluginCore:
             document_id
         )  # TODO: for testing purposes remove when db ok or cache
 
-        return Result(True, None)
+        return Result(True, None, tokens=tokens_used)
 
     def remove_instance(self, caller_id: str, document_id: int):
         pass
