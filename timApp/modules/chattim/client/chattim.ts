@@ -157,7 +157,7 @@ export class ChatTIMComponent
         if (!dialog) {
             return;
         }
-        const panelEl =
+        const panelEl: HTMLElement | null =
             this.hostElement.nativeElement.querySelector(".settings-panel");
 
         if (isOpen) {
