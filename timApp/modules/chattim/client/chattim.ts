@@ -192,7 +192,7 @@ export class ChatTIMComponent
 
     conversation: ChatEntry[] = [];
 
-    answer?: string; // TODO: needed?
+    answer?: string;
     error?: string;
     isRunning: boolean = false;
     userInput = "";
@@ -287,7 +287,6 @@ export class ChatTIMComponent
         return PluginFields;
     }
 
-    /* Extracts the tim-document id from the taskidurl. */
     initDocId() {
         this.document_id = this.pluginMeta.getDocumentId() ?? -1;
     }
