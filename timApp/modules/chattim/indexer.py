@@ -258,7 +258,7 @@ class Indexer:
                             self.indexed_page_ids.append(document.doc_id)
 
                             continue
-            except FileNotFoundError as e:
+            except Exception as e:
                 print(e)
                 pass
 
