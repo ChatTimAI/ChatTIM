@@ -264,6 +264,9 @@ class Indexer:
 
             chunks = self.get_blocks(doc=document)
             texts = [chunk.text for chunk in chunks]
+            if len(texts) == 0:
+                failed_embeddings += 1
+                continue
 
             embeddings = embedding_model.generate(texts)
 
@@ -317,6 +320,19 @@ class Indexer:
 
         return page_embeddings
 
+    def calculate_similarity(
+        self, embeddings: list[float], prompt_embedding: list[float]
+    ):
+        embeddings = np.array(embeddings)
+        prompt_embedding = np.array(prompt_embedding)
+
+        dot_product = embeddings @ prompt_embedding
+        norm_embeddings = np.linalg.norm(embeddings, axis=1)
+        norm_prompt = float(np.linalg.norm(prompt_embedding))
+        similarities = dot_product / (norm_embeddings * norm_prompt)
+
+        return similarities
+
     def get_context(self, prompt: str, identifier: int, k: int = 3) -> ContextResponse:
         """returns the context for the prompt as list of text,and the number of tokens used
 
@@ -328,10 +344,11 @@ class Indexer:
         embedding_model = self.embedding_models[identifier]
 
         tokens_used = 0
+
         try:
             prompt_embedding = embedding_model.generate([prompt])
             tokens_used = prompt_embedding.used_tokens
-            prompt_embedding = np.array(prompt_embedding.embeddings[0])
+            prompt_embedding = prompt_embedding.embeddings[0]
         except Exception as e:
             print(f"Prompt embedding error: {e}")
             ContextResponse(context="", tokens_used=tokens_used)
@@ -341,21 +358,19 @@ class Indexer:
         )
 
         embeddings: list[float] = []
-        texts = []
+        texts: list[str] = []
 
         for page in page_embeddings:
             for chunk in page["embeddings"]:
                 embeddings.append(chunk["embedding"])
                 texts.append(chunk["text"])
 
-        embeddings = np.array(embeddings)
+        if len(embeddings) == 0:
+            return ContextResponse(context="", tokens_used=tokens_used)
 
-        # manual cosine similarity
-        dot_product = embeddings @ prompt_embedding
-        norm_embeddings = np.linalg.norm(embeddings, axis=1)
-        norm_prompt = np.linalg.norm(prompt_embedding)
-        similarities = dot_product / (norm_embeddings * norm_prompt)
-
+        similarities = self.calculate_similarity(
+            embeddings=embeddings, prompt_embedding=prompt_embedding, texts=texts
+        )
         data = [[t, e] for t, e in zip(texts, similarities)]
 
         data.sort(key=lambda x: x[1], reverse=True)
