@@ -469,7 +469,7 @@ class PluginCore:
 
         # TODO: retrieving llm provider when model info is not hardcoded
         llm_provider = kwargs_model["provider"]
-        emb_model = create_embedder(provider=llm_provider)
+        emb_model = create_embedder()
         self.indexer.add_embedder(document_id, emb_model)
 
         tokens_used, failed_embeddings = self.indexer.create_embeddings(

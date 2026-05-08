@@ -65,10 +65,23 @@ export interface TokenLimitForUser extends Record<string, JsonValue> {
                                 [(ngModel)]="selectedModel">
                             <option *ngFor="let m of availableModels" [ngValue]="m.value">{{ m.label }}</option>
                         </select>
+                    
+                        Provider for embedding creation: <strong>{{ selectedEmbedderProvider }}</strong>
+                    
+                            <div class="embedder-buttons">
+                                    <div class="form-check" *ngFor="let provider of availableEmbedderProviders">
+                                        <label class="form-check-label">
+                                            <input type="radio"
+                                                   class="form-check-input"
+                                                   name="embedderProviderRadio"
+                                                   [value]="provider"
+                                                   [(ngModel)]="selectedEmbedderProvider">
+                                            {{ provider }}
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
                     </div>
-                </div>
-              
-                
                 <!-- Switch between summarizing, (balanced) and creative -->
                 <div class="settings-row">
                     <button class="btn btn-link settings-section-btn"
@@ -245,6 +258,7 @@ export class ChatControlPanelComponent {
     @Input() selectedModel!: string;
 
     @Input() selectedMode!: string;
+    @Input() selectedEmbedderProvider!: string;
     @Input() maxTokens!: number;
     @Input() systemPromptPath!: string;
     @Input() isTeacher: boolean = false;
@@ -259,6 +273,8 @@ export class ChatControlPanelComponent {
     @Input() availableModels?: ChatModel[];
     @Input() availableModes?: string[];
 
+    availableEmbedderProviders: string[] = ["OpenAI", "Google"];
+
     @Output() saveSettingsClick = new EventEmitter<ControlPanelSettings>();
     @Output() panelToggled = new EventEmitter<boolean>();
 
@@ -271,6 +287,7 @@ export class ChatControlPanelComponent {
         const data: ControlPanelSettings = {
             model_id: this.selectedModel,
             llm_mode: this.selectedMode,
+            embedder_provider: this.selectedEmbedderProvider,
             max_tokens: this.maxTokens,
             tim_paths: this.localFilePaths,
             system_prompt_path: this.systemPromptPath,

@@ -139,15 +139,27 @@ class OpenAiEmbeddingModel(EmbeddingModel):
         return self.model_type
 
 
-def create_embedder(provider: str) -> EmbeddingModel:
+def create_embedder() -> EmbeddingModel | None:
     """creates embedding model based on provider, defaults to openai
     :param provider: provider of the embedding model"""
-    if provider == "google":
-        return GeminiEmbeddingModel(api_key=os.environ["GEMINI_API_KEY"])
+    openai_key = os.environ.get("OPENAI_API_KEY")
+    try:
+        if openai_key:
+            return OpenAiEmbeddingModel(
+                api_key=openai_key, model_type="text-embedding-3-small"
+            )
 
-    return OpenAiEmbeddingModel(
-        api_key=os.environ["OPENAI_API_KEY"], model_type="text-embedding-3-small"
-    )
+    except Exception as e:
+        print(f"No valid OpenAI API key for embedding model{e}")
+    google_key = os.environ.get("GOOGLE_API_KEY")
+    try:
+        return GeminiEmbeddingModel(
+            api_key=google_key, model_type="gemini-embedding-001"
+        )
+    except Exception as e:
+        print(f"No valid google API key for embedding model {e}")
+    print("No openai or google API key found, could not create embedder")
+    return None
 
 
 class Indexer:
