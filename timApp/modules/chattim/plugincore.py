@@ -67,6 +67,7 @@ class InstanceAttributes:
     tim_paths: str = ""
     system_prompt_path: str = ""
     global_policy: Policy = field(default_factory=Policy)
+    embedder_provider: str = "dummy"
 
     @classmethod
     def default(cls) -> "InstanceAttributes":
@@ -77,6 +78,7 @@ class InstanceAttributes:
 class InstanceSettingsData(InstanceAttributes):
     availableModels: list[ChatModel] = field(kw_only=True)
     availableModes: list[str] = field(kw_only=True)
+    availableEmbedderProviders: list[str] = field(kw_only=True)
 
 
 T = TypeVar("T")
@@ -378,6 +380,7 @@ class PluginCore:
         data = InstanceSettingsData(
             availableModes=RagMode.supported_modes(),
             availableModels=self._get_supported_chat_models(provider, api_key),
+            availableEmbedderProviders=self._get_available_embedder_providers(),
         )
 
         return Result(value=data)
@@ -394,6 +397,7 @@ class PluginCore:
         :return: On error: Result(None, error_reason) On success (True, None)
         """
         model_id: str = instance_settings.model_id
+        embedder_provider: str = instance_settings.embedder_provider
         llm_mode: str = instance_settings.llm_mode
         max_tokens: int = instance_settings.max_tokens
         tim_paths: str = instance_settings.tim_paths
@@ -469,7 +473,7 @@ class PluginCore:
 
         # TODO: retrieving llm provider when model info is not hardcoded
         llm_provider = kwargs_model["provider"]
-        emb_model = create_embedder()
+        emb_model = create_embedder(embedder_provider=embedder_provider)
         self.indexer.add_embedder(document_id, emb_model)
 
         tokens_used, failed_embeddings = self.indexer.create_embeddings(
@@ -534,6 +538,16 @@ class PluginCore:
         for model_id in PluginCore._get_supported_models(provider, api_key):
             chat_models.append(ChatModel(label=model_id, value=model_id))
         return chat_models
+
+    @staticmethod
+    def _get_available_embedder_providers() -> list[str]:
+        """Returns a list of available embedding providers based on API keys."""
+        providers = []
+        if os.environ.get("OPENAI_API_KEY"):
+            providers.append("OpenAI")
+        if os.environ.get("GOOGLE_API_KEY"):
+            providers.append("Google")
+        return providers
 
     @cache.memoize(timeout=DEFAULT_CACHE_TIMEOUT, args_to_ignore=["self", "caller_id"])
     def get_system_prompt(self, caller_id: int, document_id: int) -> str | None:

@@ -9,6 +9,7 @@ export interface ChatModel extends Record<string, JsonValue> {
 export interface ControlPanelSettings extends Record<string, JsonValue> {
     model_id: string;
     llm_mode: string;
+    embedder_provider: string;
     max_tokens: number;
     tim_paths: string;
     system_prompt_path: string;
@@ -273,7 +274,7 @@ export class ChatControlPanelComponent {
     @Input() availableModels?: ChatModel[];
     @Input() availableModes?: string[];
 
-    availableEmbedderProviders: string[] = ["OpenAI", "Google"];
+    @Input() availableEmbedderProviders: string[] = [];
 
     @Output() saveSettingsClick = new EventEmitter<ControlPanelSettings>();
     @Output() panelToggled = new EventEmitter<boolean>();
