@@ -70,12 +70,15 @@ export interface TokenLimitForUser extends Record<string, JsonValue> {
                         Provider for embedding creation: <strong>{{ selectedEmbedderProvider }}</strong>
                     
                             <div class="embedder-buttons">
-                                    <div class="form-check" *ngFor="let provider of availableEmbedderProviders">
-                                        <label class="form-check-label">
+                                    <div class="form-check" *ngFor="let provider of allEmbedderProviders">
+                                        <label class="form-check-label" [class.disabled-label]="!embedderAvailable(provider)"
+                                        [title]="embedderAvailable(provider) ? '' : 'No API key for ' + provider">
                                             <input type="radio"
                                                    class="form-check-input"
                                                    name="embedderProviderRadio"
+                                                   [disabled]="!embedderAvailable(provider)"
                                                    [value]="provider"
+                                                   
                                                    [(ngModel)]="selectedEmbedderProvider">
                                             {{ provider }}
                                         </label>
@@ -273,9 +276,11 @@ export class ChatControlPanelComponent {
 
     @Input() availableModels?: ChatModel[];
     @Input() availableModes?: string[];
-
+    allEmbedderProviders: string[] = ["OpenAI", "Google"];
     @Input() availableEmbedderProviders: string[] = [];
-
+    embedderAvailable(provider: string): boolean {
+        return this.availableEmbedderProviders.includes(provider);
+    }
     @Output() saveSettingsClick = new EventEmitter<ControlPanelSettings>();
     @Output() panelToggled = new EventEmitter<boolean>();
 

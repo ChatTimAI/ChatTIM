@@ -142,6 +142,7 @@ export interface ControlPanelData extends ControlPanelSettings {
                             [localFilePaths]="localFilePaths"
                             [availableModels]="availableModels"
                             [availableEmbedderProviders]="availableEmbedderProviders"
+                            [selectedEmbedderProvider]="selectedEmbedderProvider"
                             [availableModes]="availableModes"
                             [tokenLimitAllUsers]="globalPolicy">
                         </chattim-control-panel>
@@ -215,7 +216,7 @@ export class ChatTIMComponent
     localFilePaths = "";
     selectedMode = "Creative";
     selectedModel = "gpt-4.1-mini";
-
+    selectedEmbedderProvider = "";
     maxTokens = 1000;
     controlpanelError?: string;
     controlpanelResponse?: string;
@@ -648,6 +649,8 @@ export class ChatTIMComponent
                 this.availableModels = result.availableModels;
                 this.availableEmbedderProviders =
                     result.availableEmbedderProviders;
+                this.selectedEmbedderProvider ||=
+                    this.availableEmbedderProviders[0];
                 this.availableModes = result.availableModes;
                 this.globalPolicy = result.global_policy;
             }

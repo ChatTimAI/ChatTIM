@@ -102,3 +102,8 @@
   align-items: center;
 
 }
+.disabled-label {
+  color: gray;
+  opacity: 0.6;
+  cursor: not-allowed;
+}
