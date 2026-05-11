@@ -279,7 +279,7 @@ export class ChatControlPanelComponent {
     allEmbedderProviders: string[] = ["OpenAI", "Google"];
     @Input() availableEmbedderProviders: string[] = [];
     embedderAvailable(provider: string): boolean {
-        return this.availableEmbedderProviders.includes(provider);
+        return this.availableEmbedderProviders.includes(provider.toLowerCase());
     }
     @Output() saveSettingsClick = new EventEmitter<ControlPanelSettings>();
     @Output() panelToggled = new EventEmitter<boolean>();

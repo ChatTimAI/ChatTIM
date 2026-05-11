@@ -385,7 +385,7 @@ class PluginCore:
         data = InstanceSettingsData(
             availableModes=RagMode.supported_modes(),
             availableModels=self._get_supported_chat_models(provider, api_key),
-            availableEmbedderProviders=self._get_available_embedder_providers(),
+            availableEmbedderProviders=self._get_available_embedder_providers(user_id),
         )
 
         return Result(value=data)
@@ -572,10 +572,15 @@ class PluginCore:
             chat_models.append(ChatModel(label=model_id, value=model_id))
         return chat_models
 
-    @staticmethod
-    def _get_available_embedder_providers() -> list[str]:
+    def _get_available_embedder_providers(self, caller_id: int) -> list[str]:
         """Returns a list of available embedding providers based on API keys."""
+        print("================================")
+        keys = self.get_user_api_keys(owner_id=caller_id)
         providers = []
+        for key in keys:
+            providers.append(key[0])
+        print(f"Providers from DB{providers}")
+        print("================================")
         if os.environ.get("OPENAI_API_KEY"):
             providers.append("OpenAI")
         if os.environ.get("GOOGLE_API_KEY"):
