@@ -81,7 +81,6 @@ class GeminiEmbeddingModel(EmbeddingModel):
                 api_key=self.api_key,
                 base_url="https://generativelanguage.googleapis.com/v1beta/openai/",
             )
-            # self.client = genai.Client(api_key=self.api_key)
 
         text = chunks
         try:
@@ -139,13 +138,13 @@ class OpenAiEmbeddingModel(EmbeddingModel):
         return self.model_type
 
 
-def create_embedder(embedder_provider: str) -> EmbeddingModel | None:
+def create_embedder(embedder_provider: str, api_key: str) -> EmbeddingModel | None:
     """creates embedding model based on provider, defaults to openai
     :param provider: provider of the embedding model"""
-    if embedder_provider == "OpenAI":
-        return OpenAiEmbeddingModel(api_key=os.environ.get("OPENAI_API_KEY"))
-    elif embedder_provider == "Google":
-        return GeminiEmbeddingModel(api_key=os.environ.get("GOOGLE_API_KEY"))
+    if embedder_provider.lower() == "openai":
+        return OpenAiEmbeddingModel(api_key=api_key)
+    elif embedder_provider.lower() == "google":
+        return GeminiEmbeddingModel(api_key=api_key)
 
     return None
 
