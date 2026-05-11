@@ -590,10 +590,7 @@ class PluginCore:
             providers.append(key[0])
         print(f"Providers from DB{providers}")
         print("================================")
-        if os.environ.get("OPENAI_API_KEY"):
-            providers.append("OpenAI")
-        if os.environ.get("GOOGLE_API_KEY"):
-            providers.append("Google")
+
         return providers
 
     @cache.memoize(timeout=DEFAULT_CACHE_TIMEOUT, args_to_ignore=["self", "caller_id"])
