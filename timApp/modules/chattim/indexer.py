@@ -350,21 +350,25 @@ class Indexer:
             prompt_embedding = prompt_embedding.embeddings[0]
         except Exception as e:
             print(f"Prompt embedding error: {e}")
-            ContextResponse(context="", tokens_used=tokens_used)
+            return ContextResponse(context="", tokens_used=tokens_used)
 
         page_embeddings = self.get_embeddings(
             self.indexed_page_ids, embedding_model.get_model_type()
         )
 
-        embeddings: list[float] = []
+        embeddings: list[list[float]] = []
         texts: list[str] = []
 
         for page in page_embeddings:
-            for chunk in page["embeddings"]:
-                embeddings.append(chunk["embedding"])
-                texts.append(chunk["text"])
+            for chunk in page.get("embeddings", []):
+                embedding = chunk.get("embedding")
+                text = chunk.get("text")
+                if not embedding or not text:
+                    continue
+                embeddings.append(embedding)
+                texts.append(text)
 
-        if len(embeddings) or len(prompt_embedding) == 0:
+        if not embeddings or not prompt_embedding:
             return ContextResponse(context="", tokens_used=tokens_used)
 
         similarities = self.calculate_similarity(
