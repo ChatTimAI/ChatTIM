@@ -364,7 +364,7 @@ class Indexer:
                 embeddings.append(chunk["embedding"])
                 texts.append(chunk["text"])
 
-        if len(embeddings) == 0:
+        if len(embeddings) or len(prompt_embedding) == 0:
             return ContextResponse(context="", tokens_used=tokens_used)
 
         similarities = self.calculate_similarity(
