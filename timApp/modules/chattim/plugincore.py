@@ -488,7 +488,7 @@ class PluginCore:
                     embedder_provider=embedder_provider, api_key=key[2]
                 )
                 continue
-            return Result(None, f"Failed to create embedder, No available API key")
+            # return Result(None, f"Failed to create embedder, No available API key")
 
         self.indexer.add_embedder(document_id, emb_model)
 

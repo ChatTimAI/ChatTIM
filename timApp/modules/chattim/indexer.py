@@ -368,7 +368,7 @@ class Indexer:
             return ContextResponse(context="", tokens_used=tokens_used)
 
         similarities = self.calculate_similarity(
-            embeddings=embeddings, prompt_embedding=prompt_embedding, texts=texts
+            embeddings=embeddings, prompt_embedding=prompt_embedding
         )
         data = [[t, e] for t, e in zip(texts, similarities)]
 
