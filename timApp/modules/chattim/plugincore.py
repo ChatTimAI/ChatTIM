@@ -476,9 +476,7 @@ class PluginCore:
         except ValueError as e:
             return Result(None, str(e))
 
-        # TODO: indeksoinnit pyörimään
-
-        # TODO: retrieving llm provider when model info is not hardcoded
+        # TODO: api key from db, change create_embedder to take api key as parameter
         llm_provider = kwargs_model["provider"]
         emb_model = create_embedder(embedder_provider=embedder_provider)
         self.indexer.add_embedder(document_id, emb_model)
