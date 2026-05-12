@@ -479,15 +479,13 @@ class PluginCore:
         # TODO: api key from db, change create_embedder to take api key as parameter
         llm_provider = kwargs_model["provider"]
         available_keys: list[APIKey] = self.get_user_api_keys(owner_id=caller_id)
-        # userid, provider, alias, api_key
 
         for key in available_keys:
             if key[1].lower() == embedder_provider.lower():
-                print(key[2])
                 emb_model = create_embedder(
                     embedder_provider=embedder_provider, api_key=key[2]
                 )
-                continue
+                break
             # return Result(None, f"Failed to create embedder, No available API key")
 
         self.indexer.add_embedder(document_id, emb_model)
@@ -587,7 +585,7 @@ class PluginCore:
         keys = self.get_user_api_keys(owner_id=caller_id)
         providers = []
         for key in keys:
-            providers.append(key[0])
+            providers.append(key[1])
         print(f"Providers from DB{providers}")
         print("================================")
 
