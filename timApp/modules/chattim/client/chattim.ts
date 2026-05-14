@@ -91,7 +91,7 @@ export interface ControlPanelData extends ControlPanelSettings {
         <tim-dialog-frame class="chattim-dialog-frame" [size]="'md'">
             <ng-container header> {{ header }}</ng-container>
             <ng-container body>
-                <div class="chattim-body">
+                <div class="chattim-body scroll-box">
                     <div class="scroll-box" #conversationScroll>
                         <div *ngIf="conversation.length === 0" class="chat-welcome">
                             <ng-container *ngIf="markup.welcomeText; else localizedWelcome">
@@ -218,6 +218,8 @@ export class ChatTIMComponent
     selectedModel = "gpt-4.1-mini";
     selectedEmbedderProvider = "";
     maxTokens = 1000;
+
+    maxTokens: number | null = 1000;
     controlpanelError?: string;
     controlpanelResponse?: string;
     availableModels?: ChatModel[];
