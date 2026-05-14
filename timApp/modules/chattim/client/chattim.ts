@@ -217,7 +217,6 @@ export class ChatTIMComponent
     selectedMode = "Creative";
     selectedModel = "gpt-4.1-mini";
     selectedEmbedderProvider = "";
-    maxTokens = 1000;
 
     maxTokens: number | null = 1000;
     controlpanelError?: string;

@@ -10,7 +10,7 @@ export interface ControlPanelSettings extends Record<string, JsonValue> {
     model_id: string;
     llm_mode: string;
     embedder_provider: string;
-    max_tokens: number;
+
     max_tokens: number | null;
     tim_paths: string;
     system_prompt_path: string;
@@ -283,7 +283,7 @@ export class ChatControlPanelComponent {
 
     @Input() selectedMode!: string;
     @Input() selectedEmbedderProvider!: string;
-    @Input() maxTokens!: number;
+
     @Input() systemPromptPath!: string;
     @Input() isTeacher: boolean = false;
 
@@ -314,7 +314,7 @@ export class ChatControlPanelComponent {
             model_id: this.selectedModel,
             llm_mode: this.selectedMode,
             embedder_provider: this.selectedEmbedderProvider,
-            max_tokens: this.maxTokens,
+
             max_tokens: this.maxTokensValue,
             tim_paths: this.localFilePaths,
             system_prompt_path: this.systemPromptPath,
