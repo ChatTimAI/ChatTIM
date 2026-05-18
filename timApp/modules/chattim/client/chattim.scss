@@ -57,6 +57,14 @@
   height: 100%;
 }
 
+.sticky-chat-row {
+  position: sticky;
+  z-index: 1;
+  bottom: 0;
+  background: white;
+  padding-top: 4px;
+}
+
 .chat-row {
   display: flex;
   flex-direction: row;
@@ -90,6 +98,7 @@
 .control-panel-container {
   align-items: start;
   flex: 0 0 auto;
+  max-height: 60%
 }
 
 .time-window-label {
