@@ -43,6 +43,13 @@ import {ChatControlPanelComponent} from "./controlpanel";
 const PluginMarkupFields = t.intersection([
     t.partial({
         welcomeText: t.string,
+        apiAlias: t.string,
+        defaultWindowSize: t.union([
+            t.literal("sm"),
+            t.literal("md"),
+            t.literal("lg"),
+            t.literal("xs"),
+        ]),
     }),
     GenericPluginMarkup,
     t.type({
@@ -92,7 +99,7 @@ export interface ControlPanelData extends ControlPanelSettings {
     encapsulation: ViewEncapsulation.None,
     // TODO: Display message datetime from the timestamp with `dateString()`
     template: `
-        <tim-dialog-frame class="chattim-dialog-frame" [size]="'md'">
+        <tim-dialog-frame class="chattim-dialog-frame" [size]="windowSize">
             <ng-container header> {{ header }}</ng-container>
             <ng-container body>
                 <div class="chattim-body scroll-box">
@@ -317,6 +324,11 @@ export class ChatTIMComponent
             return;
         }
         await this.doSendUserInput();
+    }
+
+    /* used to set the default window size from markup */
+    get windowSize(): "sm" | "md" | "lg" | "xs" {
+        return this.markup.defaultWindowSize ?? "md";
     }
 
     getAttributeType() {
