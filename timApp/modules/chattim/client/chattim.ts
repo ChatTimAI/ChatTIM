@@ -104,7 +104,7 @@ export interface ControlPanelData extends ControlPanelSettings {
             <ng-container body>
                 <div class="chattim-body scroll-box" #conversationScroll>
                     <div class="upper-area">
-                        <div class="" #conversationScroll>
+                        <div>
                             <div *ngIf="conversation.length === 0" class="chat-welcome">
                                 <ng-container *ngIf="markup.welcomeText; else localizedWelcome">
                                     {{ markup.welcomeText }}
