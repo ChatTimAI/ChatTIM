@@ -146,7 +146,137 @@ type TimeUnit = "seconds" | "minutes" | "hours" | "days";
                         </label>
                     </div>
 
-                    <div class="checkbox">
+                    
+                </div>
+            </div>
+            <div>
+                
+                
+            </div>
+            <!-- Switch between summarizing, (balanced) and creative -->
+            <div class="settings-row">
+                <button class="btn btn-link settings-section-btn"
+                        (click)="modeOpen = !modeOpen">
+        <span class="glyphicon"
+              [class.glyphicon-chevron-right]="!modeOpen"
+              [class.glyphicon-chevron-down]="modeOpen">
+        </span>
+                    Mode: <strong>{{ selectedMode }}</strong>
+                    <span *ngIf="isAnthropicKeySelected" style="margin-left: 6px; font-size: 0.85em; color: #888;">
+                            (Summarizing not available with Anthropic)
+                        </span>
+                </button>
+                <div *ngIf="modeOpen" class="settings-section-body">
+                    <div class="radio" *ngFor="let mode of availableModes">
+                        <label [class.disabled-label]="isAnthropicKeySelected && mode !== 'Creative'">
+                            <input type="radio"
+                                   name="modeRadio"
+                                   [value]="mode"
+                                   [(ngModel)]="selectedMode"
+                                   [disabled]="isAnthropicKeySelected && mode !== 'Creative'">
+                            {{ mode }}
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Set max tokens for the instance -->
+            <div class="settings-row">
+                <button class="btn btn-link settings-section-btn"
+                        (click)="tokensOpen = !tokensOpen">
+                    <span class="glyphicon"
+                          [class.glyphicon-chevron-right]="!tokensOpen"
+                          [class.glyphicon-chevron-down]="tokensOpen">
+                    </span>
+                    Max tokens: <strong>{{ maxTokensValue }}</strong>
+                </button>
+                <div *ngIf="tokensOpen" class="settings-section-body">
+                    <input type="text"
+                           class="form-control"
+                           [(ngModel)]="maxTokensLocal"
+                           (ngModelChange)="onMaxTokensChanged()"
+                    >
+                </div>
+
+                <div class="error" *ngIf="isInvalidMaxTokens">
+                    Input should be an integer within [0, {{MAX_NUMBER_INPUT}}]
+                </div>
+            </div>
+
+            
+
+            <!-- Add more documents to the model (TIM - filepath) -->
+            <div class="settings-row">
+                <button class="btn btn-link settings-section-btn"
+                        (click)="filesOpen = !filesOpen">
+                    <span class="glyphicon"
+                          [class.glyphicon-chevron-right]="!filesOpen"
+                          [class.glyphicon-chevron-down]="filesOpen">
+                    </span>
+                    Add TIM-documents: {{ selectedItemPaths.length }}
+                </button>
+                <div *ngIf="filesOpen" class="settings-section-body">
+                    <tim-directory-picker
+                        [startItem]="currentFolder 
+                                        ? {itemPath: currentFolder, isFolder: true} 
+                                        : undefined"
+                        [(selection)]="selectedItemPaths"
+                        [restrictions]="pathRestrictions"
+                    ></tim-directory-picker>
+                </div>
+            </div>
+
+
+            
+
+
+            
+
+            <!-- Open dialog to view user token usage and policy modifications -->
+            <div class="settings-row">
+                <button class="btn btn-link settings-section-btn"
+                        (click)="toggleUserControl()">
+                        <span class="glyphicon"
+                              [class.glyphicon-chevron-right]="!userControlOpen"
+                              [class.glyphicon-chevron-down]="userControlOpen">
+                        </span>
+                    Token consumption & per-user policies:
+                </button>
+                <usercontrol *ngIf="userControlOpen"
+                             [setUserData]="userUsageAndPolicyData"
+                             (userDataRequest)="userDataRequest.emit()"
+                             (policySaveRequest)="policySaveRequest.emit($event)"
+                             [policySaveResponse]="policySaveResponse"
+                >
+                </usercontrol>
+            </div>
+            
+            <button class="btn btn-link settings-section-btn"
+                        (click)="extraOpen = !extraOpen">
+                    <span class="glyphicon"
+                          [class.glyphicon-chevron-right]="!extraOpen"
+                          [class.glyphicon-chevron-down]="extraOpen">
+                    </span>
+                    Additional settings
+                </button>
+            <div *ngIf="extraOpen" class="settings-section-body">
+            <div class="settings-row">
+                
+                <!-- Add a custom system prompt -->
+            <div class="settings-row">
+                
+                <div *ngIf="promptOpen" class="settings-section-body">
+                    <tim-directory-picker
+                        [startItem]="systemPrompt 
+                                        ? {itemPath: systemPrompt, isFolder: false} 
+                                        : undefined"
+                        [(selection)]="systemPromptSelection"
+                        [restrictions]="{maxSelectedCount: 1, selectable: 'documents'}"
+                    ></tim-directory-picker>
+                </div>
+            </div>
+                
+                <div class="checkbox">
                         <label>
                             <input type="checkbox"
                                    [(ngModel)]="enabledTemperature">
@@ -210,60 +340,21 @@ type TimeUnit = "seconds" | "minutes" | "hours" | "days";
                     <div class="error" *ngIf="isInvalidTopChunks">
                         Top-K should be between 1 and 20
                     </div>
-                </div>
-            </div>
-
-            <!-- Switch between summarizing, (balanced) and creative -->
+                
+                <!-- Add time window restrictions for users -->
             <div class="settings-row">
-                <button class="btn btn-link settings-section-btn"
-                        (click)="modeOpen = !modeOpen">
-        <span class="glyphicon"
-              [class.glyphicon-chevron-right]="!modeOpen"
-              [class.glyphicon-chevron-down]="modeOpen">
-        </span>
-                    Mode: <strong>{{ selectedMode }}</strong>
-                    <span *ngIf="isAnthropicKeySelected" style="margin-left: 6px; font-size: 0.85em; color: #888;">
-                            (Summarizing not available with Anthropic)
-                        </span>
-                </button>
-                <div *ngIf="modeOpen" class="settings-section-body">
-                    <div class="radio" *ngFor="let mode of availableModes">
-                        <label [class.disabled-label]="isAnthropicKeySelected && mode !== 'Creative'">
-                            <input type="radio"
-                                   name="modeRadio"
-                                   [value]="mode"
-                                   [(ngModel)]="selectedMode"
-                                   [disabled]="isAnthropicKeySelected && mode !== 'Creative'">
-                            {{ mode }}
-                        </label>
-                    </div>
-                </div>
-            </div>
+               
 
-            <!-- Set max tokens for the instance -->
-            <div class="settings-row">
-                <button class="btn btn-link settings-section-btn"
-                        (click)="tokensOpen = !tokensOpen">
-                    <span class="glyphicon"
-                          [class.glyphicon-chevron-right]="!tokensOpen"
-                          [class.glyphicon-chevron-down]="tokensOpen">
-                    </span>
-                    Max tokens: <strong>{{ maxTokensValue }}</strong>
-                </button>
-                <div *ngIf="tokensOpen" class="settings-section-body">
-                    <input type="text"
-                           class="form-control"
-                           [(ngModel)]="maxTokensLocal"
-                           (ngModelChange)="onMaxTokensChanged()"
+                <ng-container>
+                    <userpolicy [userLimits]="tokenLimitAllUsers"
+                                (isInInvalidState)="invalidUserPolicyState = $event"
                     >
-                </div>
-
-                <div class="error" *ngIf="isInvalidMaxTokens">
-                    Input should be an integer within [0, {{MAX_NUMBER_INPUT}}]
-                </div>
+                    </userpolicy>
+                </ng-container>
             </div>
-
-            <!-- Conversation context window -->
+            </div>
+                
+                 <!-- Conversation context window -->
             <div class="settings-row">
                 <button class="btn btn-link settings-section-btn"
                         (click)="convWindowOpen = !convWindowOpen">
@@ -310,88 +401,7 @@ type TimeUnit = "seconds" | "minutes" | "hours" | "days";
                     </div> 
                 </div> 
             </div>
-
-            <!-- Add more documents to the model (TIM - filepath) -->
-            <div class="settings-row">
-                <button class="btn btn-link settings-section-btn"
-                        (click)="filesOpen = !filesOpen">
-                    <span class="glyphicon"
-                          [class.glyphicon-chevron-right]="!filesOpen"
-                          [class.glyphicon-chevron-down]="filesOpen">
-                    </span>
-                    Add TIM-documents: {{ selectedItemPaths.length }}
-                </button>
-                <div *ngIf="filesOpen" class="settings-section-body">
-                    <tim-directory-picker
-                        [startItem]="currentFolder 
-                                        ? {itemPath: currentFolder, isFolder: true} 
-                                        : undefined"
-                        [(selection)]="selectedItemPaths"
-                        [restrictions]="pathRestrictions"
-                    ></tim-directory-picker>
                 </div>
-            </div>
-
-
-            <!-- Add a custom system prompt -->
-            <div class="settings-row">
-                <button class="btn btn-link settings-section-btn"
-                        (click)="promptOpen = !promptOpen">
-                    <span class="glyphicon"
-                          [class.glyphicon-chevron-right]="!promptOpen"
-                          [class.glyphicon-chevron-down]="promptOpen">
-                    </span>
-                    Set system prompt path: {{ systemPrompt }}
-                </button>
-                <div *ngIf="promptOpen" class="settings-section-body">
-                    <tim-directory-picker
-                        [startItem]="systemPrompt 
-                                        ? {itemPath: systemPrompt, isFolder: false} 
-                                        : undefined"
-                        [(selection)]="systemPromptSelection"
-                        [restrictions]="{maxSelectedCount: 1, selectable: 'documents'}"
-                    ></tim-directory-picker>
-                </div>
-            </div>
-
-
-            <!-- Add time window restrictions for users -->
-            <div class="settings-row">
-                <button class="btn btn-link settings-section-btn"
-                        (click)="globalPolicyOpen = !globalPolicyOpen">
-                    <span class="glyphicon"
-                          [class.glyphicon-chevron-right]="!globalPolicyOpen"
-                          [class.glyphicon-chevron-down]="globalPolicyOpen">
-                    </span>
-                    Restrictions for all users:
-                </button>
-
-                <ng-container *ngIf="globalPolicyOpen">
-                    <userpolicy [userLimits]="tokenLimitAllUsers"
-                                (isInInvalidState)="invalidUserPolicyState = $event"
-                    >
-                    </userpolicy>
-                </ng-container>
-            </div>
-
-            <!-- Open dialog to view user token usage and policy modifications -->
-            <div class="settings-row">
-                <button class="btn btn-link settings-section-btn"
-                        (click)="toggleUserControl()">
-                        <span class="glyphicon"
-                              [class.glyphicon-chevron-right]="!userControlOpen"
-                              [class.glyphicon-chevron-down]="userControlOpen">
-                        </span>
-                    Token consumption & per-user policies:
-                </button>
-                <usercontrol *ngIf="userControlOpen"
-                             [setUserData]="userUsageAndPolicyData"
-                             (userDataRequest)="userDataRequest.emit()"
-                             (policySaveRequest)="policySaveRequest.emit($event)"
-                             [policySaveResponse]="policySaveResponse"
-                >
-                </usercontrol>
-            </div>
 
                 <div class="settings-row">
                     <!-- Save button that sends the chosen stuff -->
@@ -408,6 +418,8 @@ type TimeUnit = "seconds" | "minutes" | "hours" | "days";
                 </div>
                  <div class="error" *ngIf="error && !response" [innerHTML]="error | purify"></div> 
                 <div *ngIf="response && !error" [innerHTML]="response | purify"></div>
+            
+           
         </div>
     `,
 })
@@ -416,6 +428,7 @@ export class ChatControlPanelComponent {
 
     settingsOpen = false;
     modelOpen = false;
+    extraOpen = false;
     modeOpen = false;
     keyOpen = false;
 
