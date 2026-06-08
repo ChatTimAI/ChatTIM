@@ -355,16 +355,19 @@ type TimeUnit = "seconds" | "minutes" | "hours" | "days";
             </div>
                 
                  <!-- Conversation context window -->
-            <div class="settings-row">
-                <button class="btn btn-link settings-section-btn"
-                        (click)="convWindowOpen = !convWindowOpen">
-                      <span class="glyphicon"
-                            [class.glyphicon-chevron-right]="!convWindowOpen"
-                            [class.glyphicon-chevron-down]="convWindowOpen">
-                      </span>
-                    Conversation window:
-                    <strong>{{ convTimeWindowLabel }}</strong>
-                </button>
+            Conversation window:
+                    <strong>{{ this.convWindowOpen
+                ? this.convTimeWindowLabel
+                : "Disabled" }}</strong>
+                <div class="checkbox">
+                
+                        
+                      <label>
+                          <input type="checkbox"
+                          [(ngModel)]="convWindowOpen">
+                      </label>
+                    Enable conversation window:
+                
 
                 <div *ngIf="convWindowOpen" class="settings-section-body">
                     <div>
@@ -615,8 +618,10 @@ export class ChatControlPanelComponent {
             model_id: this.selectedModel,
             llm_mode: this.selectedMode,
             max_tokens: this.maxTokensValue,
-            conv_time_window: this.convTimeWindowValue,
-            conv_messages_max: this.convMessagesMax,
+            conv_time_window: this.convWindowOpen
+                ? this.convTimeWindowValue
+                : 0,
+            conv_messages_max: this.convWindowOpen ? this.convMessagesMax : 32,
             tim_paths: this.selectedItemPaths,
             system_prompt_path: this.systemPrompt ?? "",
             global_policy: this.tokenLimitAllUsers,
