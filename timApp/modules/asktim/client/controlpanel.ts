@@ -72,35 +72,7 @@ type TimeUnit = "seconds" | "minutes" | "hours" | "days";
 
         <div class="settings-panel" [style.display]="settingsOpen ? 'block' : 'none'">
             <!-- Choose API-key -->
-            <div class="settings-row">
-                <button class="btn btn-link settings-section-btn"
-                        (click)="keyOpen = !keyOpen">
-                    <span class="glyphicon"
-                          [class.glyphicon-chevron-right]="!keyOpen"
-                          [class.glyphicon-chevron-down]="keyOpen">
-                    </span>
-                    API-alias: <strong>{{ selectedPublicKey }}</strong>
-                </button>
-                <div *ngIf="keyOpen" class="settings-section-body">
-                    <select class="form-control"
-                            [ngModel]="selectedPublicKey"
-                            (ngModelChange)="onPublicKeyChange($event)">
-                        <option *ngFor="let key of availablePublicKeys"
-                                [ngValue]="key.public_key">{{
-                                key.public_key + " - " + key.provider + (key.is_shared ? " " +
-                                    "(shared by " + key.shared_by + ")" : "")
-                            }}
-                        </option>
-                        z§
-                    </select>
-                    <button class="btn btn-default"
-                            style="margin-top: 6px;"
-                            [disabled]="!selectedPublicKey"
-                            (click)="fetchModelsClicked()">
-                        Fetch models
-                    </button>
-                </div>
-            </div>
+            
 
 
             <!-- Choose the LLM -->
@@ -114,6 +86,30 @@ type TimeUnit = "seconds" | "minutes" | "hours" | "days";
                     Model: <strong>{{ selectedModelLabel }}</strong>
                 </button>
                 <div *ngIf="modelOpen" class="settings-section-body">
+                   <div class="settings-row">
+                    API-alias: <strong>{{ selectedPublicKey }}</strong>
+                
+                <div class="settings-section-body">
+                    <select class="form-control"
+                            [ngModel]="selectedPublicKey"
+                            (ngModelChange)="onPublicKeyChange($event)">
+                        <option *ngFor="let key of availablePublicKeys"
+                                [ngValue]="key.public_key">{{
+                                key.public_key + " - " + key.provider + (key.is_shared ? " " +
+                                    "(shared by " + key.shared_by + ")" : "")
+                            }}
+                        </option>
+                        
+                    </select>
+                    <button class="btn btn-default"
+                            style="margin-top: 6px;"
+                            [disabled]="!selectedPublicKey"
+                            (click)="fetchModelsClicked()">
+                        Fetch models
+                    </button>
+                </div>
+            </div>
+                   
                     <div class="checkbox">
                         <label>
                             <input type="checkbox"
@@ -161,14 +157,14 @@ type TimeUnit = "seconds" | "minutes" | "hours" | "days";
               [class.glyphicon-chevron-right]="!modeOpen"
               [class.glyphicon-chevron-down]="modeOpen">
         </span>
-                    Mode: <strong>{{ selectedMode }}</strong>
+                    Answering mode: <strong>{{ selectedMode }}</strong>
                     <span *ngIf="isAnthropicKeySelected" style="margin-left: 6px; font-size: 0.85em; color: #888;">
                             (Summarizing not available with Anthropic)
                         </span>
                 </button>
                 <div *ngIf="modeOpen" class="settings-section-body">
-                    <div class="radio" *ngFor="let mode of availableModes">
-                        <label [class.disabled-label]="isAnthropicKeySelected && mode !== 'Creative'">
+                    <div class="mode-buttons" >
+                        <label *ngFor="let mode of availableModes" [class.disabled-label]="isAnthropicKeySelected && mode !== 'Creative'">
                             <input type="radio"
                                    name="modeRadio"
                                    [value]="mode"
